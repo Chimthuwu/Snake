@@ -1,20 +1,6 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/svb0s6Wm/Untitled.png" alt="Untitled" border="0"></a><br /><a target='_blank' href='https://dedupelist.com/'>convert list to unique values online</a><br />
+<a href="https://imgbb.com/"><img src="https://i.ibb.co/WWfRG9Z3/Untitled2.png" alt="Untitled2" border="0"></a>
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/c4e9ccd4-01bf-4609-881e-ab813e05d2f9
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Neon Snake
+A game I made for Chatterbawx that recreates the old nokia game we all knew and loved.
