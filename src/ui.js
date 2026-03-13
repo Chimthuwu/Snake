@@ -8,11 +8,14 @@ export class UIManager {
         
         // Screens
         this.menuScreen = document.getElementById('menu-screen');
+        this.menuScreen.style.pointerEvents = 'none';
         this.pauseScreen = document.getElementById('pause-screen');
+        this.pauseScreen.style.pointerEvents = 'none';
         this.gameoverScreen = document.getElementById('gameover-screen');
+        this.gameoverScreen.style.pointerEvents = 'none';
         this.hud = document.getElementById('hud');
         this.uiLayer = document.getElementById('ui-layer');
-        this.uiLayer.style.pointerEvents = 'none';
+        this.uiLayer.style.pointerEvents = 'auto';
         this.portfolioOverlay = document.getElementById('portfolio-overlay');
         this.vignetteOverlay = document.getElementById('vignette-overlay');
         
@@ -38,6 +41,21 @@ export class UIManager {
         this.btnRestart = this.gameoverScreen.querySelector('#btn-restart');
         this.btnMenu = this.gameoverScreen.querySelector('#btn-menu');
         
+        console.log('Buttons:', {
+            btnStart: this.btnStart,
+            btnResume: this.btnResume,
+            btnQuit: this.btnQuit,
+            btnRestart: this.btnRestart,
+            btnMenu: this.btnMenu
+        });
+        
+        [this.btnStart, this.btnResume, this.btnQuit, this.btnRestart, this.btnMenu, this.btnDiff, this.btnMute, this.btnPortfolio].forEach(btn => {
+            if (btn) {
+                btn.style.setProperty('pointer-events', 'auto', 'important');
+                btn.style.setProperty('z-index', '1000', 'important');
+            }
+        });
+        
         // Panels for parallax
         this.panels = document.querySelectorAll('.menu-panel');
         
@@ -53,26 +71,31 @@ export class UIManager {
         this.menuButtons = [];
         
         if (this.btnStart) this.btnStart.addEventListener('click', () => {
+            console.log('btnStart clicked');
             audio.playUISelect();
             this.game.start();
         });
         
         if (this.btnResume) this.btnResume.addEventListener('click', () => {
+            console.log('btnResume clicked');
             audio.playUISelect();
             this.game.togglePause();
         });
         
         if (this.btnQuit) this.btnQuit.addEventListener('click', () => {
+            console.log('btnQuit clicked');
             audio.playUISelect();
             this.game.quitToMenu();
         });
 
         if (this.btnRestart) this.btnRestart.addEventListener('click', () => {
+            console.log('btnRestart clicked');
             audio.playUISelect();
             this.game.start();
         });
 
         if (this.btnMenu) this.btnMenu.addEventListener('click', () => {
+            console.log('btnMenu clicked');
             audio.playUISelect();
             this.game.quitToMenu();
         });
@@ -142,35 +165,42 @@ export class UIManager {
 
     updateScreens() {
         this.menuScreen.classList.add('hidden');
+        this.menuScreen.style.pointerEvents = 'none';
         this.pauseScreen.classList.add('hidden');
+        this.pauseScreen.style.pointerEvents = 'none';
         this.gameoverScreen.classList.add('hidden');
+        this.gameoverScreen.style.pointerEvents = 'none';
         this.hud.classList.add('hidden');
+        this.uiLayer.style.pointerEvents = 'none';
 
         switch (state.current) {
             case GameState.MENU:
                 this.menuScreen.classList.remove('hidden');
+                this.menuScreen.style.pointerEvents = 'auto';
+                this.menuScreen.style.zIndex = '2000';
+                document.getElementById('main-menu-panel').style.pointerEvents = 'auto';
+                document.getElementById('main-menu-panel').style.zIndex = '2001';
+                document.querySelector('.menu-options').style.pointerEvents = 'auto';
                 this.btnDiff.textContent = state.difficulty;
-                this.uiLayer.style.pointerEvents = 'auto';
                 document.getElementById('game-canvas').style.pointerEvents = 'none';
                 this.updateMenuButtons();
                 break;
             case GameState.PLAYING:
                 this.hud.classList.remove('hidden');
-                this.uiLayer.style.pointerEvents = 'none';
                 document.getElementById('game-canvas').style.pointerEvents = 'auto';
                 break;
             case GameState.PAUSED:
                 this.hud.classList.remove('hidden');
                 this.pauseScreen.classList.remove('hidden');
-                this.uiLayer.style.pointerEvents = 'auto';
+                this.pauseScreen.style.pointerEvents = 'auto';
                 document.getElementById('game-canvas').style.pointerEvents = 'none';
                 this.updateMenuButtons();
                 break;
             case GameState.GAMEOVER:
                 this.gameoverScreen.classList.remove('hidden');
+                this.gameoverScreen.style.pointerEvents = 'auto';
                 this.goScore.textContent = state.score;
                 this.goCombo.textContent = `x${state.combo}`;
-                this.uiLayer.style.pointerEvents = 'auto';
                 document.getElementById('game-canvas').style.pointerEvents = 'none';
                 this.updateMenuButtons();
                 break;

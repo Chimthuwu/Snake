@@ -1,5 +1,5 @@
 {
-  "name": "Neon Snake Synthwave Edition",
-  "description": "A synthwave-themed Snake game with neon aesthetics and procedural audio.",
+  "name": "Neon Snake",
+  "description": "A neon-themed Snake game with neon aesthetics and procedural audio.",
   "requestFramePermissions": []
 }
