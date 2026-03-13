@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Snake | Synthwave Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Space+Grotesk:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+    <div id="app">
+        <!-- CRT Scanline Effect & Vignette -->
+        <div class="scanlines"></div>
+        <div id="vignette-overlay"></div>
+        
+        <div id="game-container">
+            <canvas id="game-canvas"></canvas>
+            
+            <!-- UI Layer -->
+            <div id="ui-layer">
+                
+                <!-- HUD -->
+                <div id="hud" class="hidden">
+                    <div class="hud-top">
+                        <div class="score-box glass-panel">
+                            <span class="label">SCORE</span>
+                            <span id="score-val" class="value">0</span>
+                        </div>
+                        <div class="combo-box glass-panel" id="combo-container">
+                            <span class="label">COMBO</span>
+                            <span id="combo-val" class="value combo-pop">x1</span>
+                            <div class="combo-bar-container">
+                                <div id="combo-bar-fill"></div>
+                            </div>
+                        </div>
+                        <div class="score-box glass-panel">
+                            <span class="label">HIGH SCORE</span>
+                            <span id="highscore-val" class="value">0</span>
+                        </div>
+                    </div>
+                    <div id="powerup-indicator" class="hidden glass-panel">
+                        <span id="powerup-name">GHOST MODE</span>
+                        <div class="progress-bar"><div id="powerup-bar-fill"></div></div>
+                    </div>
+                </div>
+
+                <!-- Main Menu -->
+                <div id="menu-screen" class="screen">
+                    <div class="menu-panel" id="main-menu-panel">
+                        <h1 class="glitch" data-text="NEON SNAKE">NEON SNAKE</h1>
+                        <p class="subtitle">SYNTHWAVE EDITION</p>
+                        
+                        <div class="menu-options">
+                            <button id="btn-start" class="neon-btn">INITIALIZE SEQUENCE</button>
+                            
+                            <div class="difficulty-selector hardware-switch">
+                                <span class="label">DIFFICULTY</span>
+                                <button id="btn-diff" class="text-btn active-glow">NORMAL</button>
+                            </div>
+                        </div>
+                        
+                        <div class="controls-hint">
+                            <p>[WASD] or [ARROWS] to move</p>
+                            <p>[SPACE] to pause</p>
+                            <p>[P] toggle portfolio mode</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pause Screen -->
+                <div id="pause-screen" class="screen hidden">
+                    <div class="menu-panel">
+                        <h2 class="glitch" data-text="SYSTEM PAUSED">SYSTEM PAUSED</h2>
+                        <button id="btn-resume" class="neon-btn">RESUME</button>
+                        <button id="btn-quit" class="text-btn mt-4">ABORT MISSION</button>
+                    </div>
+                </div>
+
+                <!-- Game Over Screen -->
+                <div id="gameover-screen" class="screen hidden">
+                    <div class="menu-panel">
+                        <h2 class="glitch text-red" data-text="CRITICAL FAILURE">CRITICAL FAILURE</h2>
+                        <div class="stats-box">
+                            <p>FINAL SCORE: <span id="go-score" class="highlight">0</span></p>
+                            <p>MAX COMBO: <span id="go-combo" class="highlight">x1</span></p>
+                        </div>
+                        <button id="btn-restart" class="neon-btn">REBOOT SYSTEM</button>
+                        <button id="btn-menu" class="text-btn mt-4">RETURN TO MENU</button>
+                    </div>
+                </div>
+
+                <!-- Portfolio Mode Overlay -->
+                <div id="portfolio-overlay" class="hidden glass-panel">
+                    <h3>// PORTFOLIO DEBUG MODE</h3>
+                    <div class="debug-grid">
+                        <span>FPS:</span> <span id="debug-fps">60</span>
+                        <span>DELTA:</span> <span id="debug-dt">16.6ms</span>
+                        <span>TICK RATE:</span> <span id="debug-tick">150ms</span>
+                        <span>SNAKE LEN:</span> <span id="debug-len">3</span>
+                        <span>ENTITIES:</span> <span id="debug-entities">0</span>
+                        <span>STATE:</span> <span id="debug-state">PLAYING</span>
+                    </div>
+                    <div class="architecture-note">
+                        <p>Architecture: ES Modules, Fixed Timestep Logic with Render Interpolation, Web Audio API Synth, Canvas 2D.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- Global Controls -->
+        <button id="btn-portfolio-toggle" class="icon-btn hardware-toggle" title="Toggle Portfolio Mode">⚙️</button>
+        <button id="btn-mute-toggle" class="icon-btn hardware-toggle" title="Toggle Audio">🔊</button>
+    </div>
+
+    <script type="module" src="/src/game.js"></script>
+</body>
+</html>
+
