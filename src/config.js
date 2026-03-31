@@ -5,7 +5,9 @@ export const CONFIG = {
     DIFFICULTIES: {
         EASY: { baseTick: 180, speedCurve: 0.99, scoreMult: 1 },
         NORMAL: { baseTick: 130, speedCurve: 0.98, scoreMult: 2 },
-        HARD: { baseTick: 90, speedCurve: 0.97, scoreMult: 3 }
+        HARD: { baseTick: 90, speedCurve: 0.97, scoreMult: 3 },
+        INSANE: { baseTick: 60, speedCurve: 0.96, scoreMult: 5 },
+        PHANTOM: { baseTick: 90, speedCurve: 0.97, scoreMult: 1.5 }
     },
     
     MIN_TICK_RATE: 40,
@@ -36,35 +38,52 @@ export const CONFIG = {
         impulseSpring: 0.2,
 
         // Snake Deformation
-        stretchAmount: 0.5,
-        turnCompression: 0.5,
-        tailLag: 0.4,
+        stretchAmount: 0.3,
+        turnCompression: 0.1,
+        tailLag: 0.2,
 
         // Grid Ripple
-        rippleStrength: 2.0, // Grid cell offset multiplier
-        rippleDuration: 1000,
-        rippleFrequency: 0.05,
-        rippleSpeed: 0.5,
+        rippleStrength: 1.5, // Grid cell offset multiplier
+        rippleDuration: 800,
+        rippleFrequency: 0.04,
+        rippleSpeed: 0.6,
 
         // Vignette & Speed
-        vignetteMax: 0.95,
-        chromaticPowerupBoost: 20,
-        speedGlowMultiplier: 5.0,
+        vignetteMax: 0.8,
+        chromaticPowerupBoost: 12,
+        speedGlowMultiplier: 3.0,
+
+        // Living Grid
+        gridBreathingSpeed: 0.002,
+        gridBreathingDepth: 0.3,
+        gridJitterAmplitude: 0.8,
+        gridJitterFrequency: 0.015,
+        gridColorFlowSpeed: 0.05,
+
+        // Cyber Terminal Engine
+        glitchChance: 0.005, // Random frame tear chance
+        glitchDuration: 100, // ms
+        glitchOffsetMax: 15, // pixels
+        chromaticBurstDuration: 300, 
+        
+        dataPacketChance: 0.1, 
+        dataPacketSpeed: 0.15,
+        gridNoiseIntensity: 0.05,
 
         // Combo Juice
-        comboPopScale: 2.5,
-        comboPulseSpeed: 25,
-        comboDecayTime: 2000
+        comboPopScale: 1.8,
+        comboPulseSpeed: 20,
+        comboDecayTime: 1500
     },
 
     COLORS: {
-        bg: '#050505',
-        grid: 'rgba(0, 242, 255, 0.08)',
-        snakeHead: '#00f2ff',
-        snakeBody: 'rgba(0, 242, 255, 0.8)',
-        snakeGhost: 'rgba(176, 0, 255, 0.5)',
-        food: '#ff0055',
-        particles: ['#00f2ff', '#ff0055', '#ffea00', '#ff00ff']
+        bg: 'hsl(240, 30%, 3%)',
+        grid: 'hsla(180, 100%, 50%, 0.15)',
+        snakeHead: 'hsl(180, 100%, 50%)',
+        snakeBody: 'hsla(180, 100%, 50%, 0.8)',
+        snakeGhost: 'hsla(280, 100%, 60%, 0.6)',
+        food: 'hsl(330, 100%, 50%)',
+        particles: ['hsl(180, 100%, 50%)', 'hsl(330, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(280, 100%, 60%)']
     },
     
     // Screen Shake

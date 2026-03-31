@@ -175,6 +175,7 @@ export class UIManager {
 
         switch (state.current) {
             case GameState.MENU:
+                this.uiLayer.style.pointerEvents = 'auto';
                 this.menuScreen.classList.remove('hidden');
                 this.menuScreen.style.pointerEvents = 'auto';
                 this.menuScreen.style.zIndex = '2000';
@@ -190,6 +191,7 @@ export class UIManager {
                 document.getElementById('game-canvas').style.pointerEvents = 'auto';
                 break;
             case GameState.PAUSED:
+                this.uiLayer.style.pointerEvents = 'auto';
                 this.hud.classList.remove('hidden');
                 this.pauseScreen.classList.remove('hidden');
                 this.pauseScreen.style.pointerEvents = 'auto';
@@ -197,6 +199,7 @@ export class UIManager {
                 this.updateMenuButtons();
                 break;
             case GameState.GAMEOVER:
+                this.uiLayer.style.pointerEvents = 'auto';
                 this.gameoverScreen.classList.remove('hidden');
                 this.gameoverScreen.style.pointerEvents = 'auto';
                 this.goScore.textContent = state.score;

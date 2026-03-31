@@ -29,15 +29,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    perspective: 1200px;
 }
 
-/* Background slow motion drift */
-@keyframes bg-drift {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
-}
-
+/* Space Ambient Background */
 #app {
     position: relative;
     width: 100%;
@@ -45,42 +39,31 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: radial-gradient(circle at center, #1a0b2e 0%, #050505 100%);
-    background-size: 200% 200%;
-    animation: bg-drift 20s ease-in-out infinite alternate;
+    background: radial-gradient(circle at top right, rgba(20, 10, 40, 1) 0%, rgba(5, 5, 10, 1) 100%);
+    overflow: hidden;
 }
 
-/* Scanline sweep */
-@keyframes scanline-sweep {
-    0% { transform: translateY(-100vh); }
-    100% { transform: translateY(100vh); }
-}
-
-.scanlines::after {
+#app::before {
     content: "";
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-    animation: scanline-sweep 6s linear infinite;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(0, 242, 255, 0.05) 0%, transparent 20%),
+        radial-gradient(circle at 80% 70%, rgba(255, 0, 255, 0.05) 0%, transparent 20%),
+        radial-gradient(circle at 50% 50%, rgba(176, 0, 255, 0.03) 0%, transparent 50%);
+    animation: bg-drift 30s ease-in-out infinite alternate;
     pointer-events: none;
-    z-index: 999;
 }
 
-/* CRT Scanlines & Vignette */
-.scanlines {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-    background-size: 100% 4px, 3px 100%;
-    z-index: 100;
-    pointer-events: none;
+@keyframes bg-drift {
+    from { transform: rotate(0deg) scale(1); }
+    to { transform: rotate(5deg) scale(1.1); }
 }
 
 #vignette-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.8) 100%);
+    background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
     z-index: 99;
     pointer-events: none;
     transition: background 0.3s ease, box-shadow 0.3s ease;
@@ -97,20 +80,18 @@ body {
     max-width: 800px;
     aspect-ratio: 1 / 1;
     max-height: 100vh;
-    box-shadow: 0 0 50px rgba(0, 242, 255, 0.1), 0 20px 60px rgba(0,0,0,0.8);
-    border: 1px solid rgba(0, 242, 255, 0.2);
-    border-radius: 12px;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 242, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     overflow: hidden;
-    background-color: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px);
-    transform-style: preserve-3d;
+    background-color: rgba(5, 5, 10, 0.8);
+    backdrop-filter: blur(20px);
 }
 
 #game-canvas {
     display: block;
     width: 100%;
     height: 100%;
-    transform-style: preserve-3d;
 }
 
 /* UI Layer */
@@ -118,7 +99,6 @@ body {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 9999;
-    transform-style: preserve-3d;
 }
 
 .hidden {
@@ -128,10 +108,10 @@ body {
 }
 
 .glass-panel {
-    background: rgba(10, 10, 15, 0.6);
-    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 /* HUD */
@@ -142,7 +122,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    transform: translateZ(30px); /* Floating HUD */
+    gap: 10px;
 }
 
 .hud-top {
@@ -174,7 +154,7 @@ body {
 }
 
 .combo-pop {
-    transform: scale(1.8) translateZ(60px);
+    transform: scale(1.8);
     text-shadow: 0 0 30px var(--magenta), 0 0 60px var(--magenta), 0 0 90px #fff;
 }
 
@@ -220,7 +200,7 @@ body {
     gap: 5px;
     border: 1px solid var(--yellow);
     box-shadow: 0 0 20px rgba(255, 234, 0, 0.2);
-    transform: translateZ(40px);
+    box-shadow: 0 0 20px rgba(255, 234, 0, 0.2);
 }
 
 #powerup-name {
@@ -257,26 +237,23 @@ body {
     background: rgba(5, 5, 5, 0.4);
     backdrop-filter: blur(3px);
     pointer-events: auto;
-    perspective: 1000px;
     transition: opacity 0.3s ease;
 }
 
 .menu-panel {
-    background: linear-gradient(135deg, rgba(20, 20, 25, 0.95), rgba(10, 10, 15, 0.98));
-    border: 1px solid rgba(0, 242, 255, 0.3);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    padding: 50px;
+    background: linear-gradient(165deg, rgba(15, 15, 25, 0.95), rgba(5, 5, 10, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 60px;
     display: flex;
     flex-direction: column;
     align-items: center;
     box-shadow: 
-        0 30px 60px rgba(0,0,0,0.8), 
-        inset 0 0 30px rgba(0, 242, 255, 0.1),
-        0 0 20px rgba(0, 242, 255, 0.2);
-    transform-style: preserve-3d;
-    transition: transform 0.1s ease-out;
-    transform: translateZ(50px);
+        0 50px 100px rgba(0,0,0,0.9), 
+        inset 0 0 40px rgba(0, 242, 255, 0.02),
+        0 0 1px 1px rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 @keyframes title-flicker {
@@ -299,7 +276,7 @@ body {
     color: var(--text-main);
     text-shadow: 0 0 20px var(--cyan);
     margin-bottom: 5px;
-    transform: translateZ(30px);
+    margin-bottom: 5px;
     animation: title-flicker 4s infinite;
 }
 
@@ -337,40 +314,37 @@ body {
     color: var(--magenta);
     margin-bottom: 50px;
     text-shadow: 0 0 15px var(--magenta);
-    transform: translateZ(20px);
 }
 
 /* Buttons & Hardware Switches */
 .neon-btn {
-    background: rgba(0, 242, 255, 0.05);
+    background: rgba(0, 242, 255, 0.03);
     color: var(--cyan);
     font-family: var(--font-mono);
-    font-size: 1.2rem;
-    font-weight: bold;
-    padding: 18px 40px;
-    border: 1px solid var(--cyan);
-    border-top: 1px solid rgba(255,255,255,0.4);
-    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 20px 48px;
+    border: 1px solid rgba(0, 242, 255, 0.5);
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-radius: 100px;
     cursor: pointer;
     text-transform: uppercase;
-    letter-spacing: 3px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 15px rgba(0, 242, 255, 0.2);
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    letter-spacing: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 10px rgba(0, 242, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
     position: relative;
     overflow: hidden;
-    transform: translateZ(40px);
 }
 
 .neon-btn:hover {
     background: var(--cyan);
     color: #000;
-    box-shadow: 0 25px 50px rgba(0, 242, 255, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.8);
-    transform: translateZ(80px) scale(1.1) translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 242, 255, 0.4), 0 0 20px rgba(0, 242, 255, 0.2);
+    transform: translateY(-4px) scale(1.02);
 }
 
 .neon-btn:active {
-    transform: translateZ(20px) scale(0.98);
-    box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+    transform: translateY(1px) scale(0.98);
 }
 
 .hardware-switch {
@@ -384,7 +358,7 @@ body {
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.1);
     border-bottom: 2px solid rgba(255,255,255,0.05);
-    transform: translateZ(20px);
+    border-bottom: 2px solid rgba(255,255,255,0.05);
 }
 
 .text-btn {
@@ -421,7 +395,7 @@ body {
     font-size: 11px;
     color: rgba(255, 255, 255, 0.3);
     line-height: 2;
-    transform: translateZ(10px);
+    line-height: 2;
 }
 
 .stats-box {
@@ -429,7 +403,7 @@ body {
     text-align: center;
     font-size: 1.4rem;
     line-height: 2;
-    transform: translateZ(30px);
+    line-height: 2;
 }
 
 .highlight {
@@ -450,7 +424,7 @@ body {
     color: var(--cyan);
     width: 280px;
     border-color: rgba(0, 242, 255, 0.3);
-    transform: translateZ(40px);
+    border-color: rgba(0, 242, 255, 0.3);
 }
 
 #portfolio-overlay h3 {

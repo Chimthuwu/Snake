@@ -264,9 +264,11 @@ class Game {
             y: head.y + dir.y
         };
 
+        const isPhantom = state.difficulty === 'PHANTOM' || state.activePowerup === 'GHOST';
+        
         // Wall collision
         if (newHead.x < 0 || newHead.x >= CONFIG.GRID_SIZE || newHead.y < 0 || newHead.y >= CONFIG.GRID_SIZE) {
-            if (state.activePowerup === 'GHOST') {
+            if (isPhantom) {
                 newHead.x = (newHead.x + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
                 newHead.y = (newHead.y + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
             } else {
@@ -279,16 +281,22 @@ class Game {
             }
         }
 
-        // Self collision
-        if (this.snake.some(s => s.x === newHead.x && s.y === newHead.y)) {
-            if (state.current === GameState.MENU) {
-                this.resetGameData();
-                return;
+        // Self-collision
+        if (!isPhantom) {
+            for (let s of this.snake) {
+                if (s.x === newHead.x && s.y === newHead.y) {
+                    if (state.current === GameState.MENU) {
+                        this.resetGameData();
+                        return;
+                    }
+                    this.gameOver();
+                    return;
+                }
             }
-            this.gameOver();
-            return;
         }
 
+        // Collisions handled above for Phantom/Ghost flexibility
+        
         this.snake.unshift(newHead);
 
         // Food collision
@@ -310,7 +318,6 @@ class Game {
                     color: color
                 });
                 
-                state.globalFlash = 1.0;
                 state.gridBrightness = 2.0 + (state.combo * 0.5);
                 state.chromaticGlitch = 1.0;
             }

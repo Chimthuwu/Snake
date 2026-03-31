@@ -14,6 +14,8 @@ export class Renderer {
         
         // Depth System State
         this.currentTilt = { x: 0, y: 0 };
+        
+        // Rave FX state
     }
 
     resize() {
@@ -47,14 +49,20 @@ export class Renderer {
     }
 
     drawGrid(ctx, cellSize) {
-        ctx.strokeStyle = `rgba(0, 242, 255, ${0.08 * state.gridBrightness})`;
-        ctx.lineWidth = 1 + (state.gridBrightness - 1.0) * 2;
-
+        const time = Date.now();
+        const breathing = 1.0 + Math.sin(time * CONFIG.VISUALS.gridBreathingSpeed) * CONFIG.VISUALS.gridBreathingDepth;
+        
         const getPoint = (ix, iy) => {
             let px = ix * cellSize;
             let py = iy * cellSize;
             
-            // Apply ripples
+            // 1. Electric Jitter
+            const jitterX = (Math.random() - 0.5) * CONFIG.VISUALS.gridJitterAmplitude;
+            const jitterY = (Math.random() - 0.5) * CONFIG.VISUALS.gridJitterAmplitude;
+            px += jitterX;
+            py += jitterY;
+
+            // 2. Grid Ripples
             state.ripples.forEach(r => {
                 const dx = ix - r.x;
                 const dy = iy - r.y;
@@ -72,22 +80,52 @@ export class Renderer {
             return {x: px, y: py};
         };
 
-        ctx.beginPath();
+        // Render Lines with Synthwave Duo-tone (Cyan Vertical, Magenta Horizontal)
         for (let i = 0; i <= CONFIG.GRID_SIZE; i++) {
-            // Vertical lines
+            // Vertical - Electric Cyan
+            ctx.beginPath();
             for (let j = 0; j <= CONFIG.GRID_SIZE; j++) {
                 const p = getPoint(i, j);
+                ctx.strokeStyle = `hsla(180, 100%, 50%, ${0.4 * state.gridBrightness * breathing})`;
+                ctx.lineWidth = 1.2;
+                
                 if (j === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
+                else {
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                }
             }
-            // Horizontal lines
+
+            // Horizontal - Shocking Magenta
+            ctx.beginPath();
             for (let j = 0; j <= CONFIG.GRID_SIZE; j++) {
                 const p = getPoint(j, i);
+                ctx.strokeStyle = `hsla(300, 100%, 50%, ${0.4 * state.gridBrightness * breathing})`;
+                ctx.lineWidth = 1.2;
+
                 if (j === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
+                else {
+                    ctx.lineTo(p.x, p.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                }
             }
         }
-        ctx.stroke();
+
+        // High-energy 'pips' at intersections (Bright White/Cyan core)
+        // High-energy 'pips' at intersections (Bright White/Cyan core)
+        ctx.fillStyle = `hsla(180, 100%, 80%, ${0.5 * state.gridBrightness * breathing})`;
+        for (let i = 0; i <= CONFIG.GRID_SIZE; i++) {
+            for (let j = 0; j <= CONFIG.GRID_SIZE; j++) {
+                const p = getPoint(i, j);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.5 * breathing, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
     }
 
     draw(gameState, particles, dt, accumulator, tickRate) {
@@ -165,22 +203,19 @@ export class Renderer {
 
         // Helper to draw with chromatic aberration
         const drawWithChromatic = (drawFn) => {
-            if (chromaticOffset > 0) {
+            if (chromaticOffset > 0 || state.chromaticGlitch > 0) {
+                const totalOffset = chromaticOffset + (state.chromaticGlitch * 15);
                 ctx.globalCompositeOperation = 'screen';
                 
                 ctx.save();
-                ctx.translate(-chromaticOffset, 0);
-                // Red channel
-                ctx.fillStyle = '#ff0000';
-                ctx.shadowColor = '#ff0000';
+                ctx.translate(-totalOffset, 0);
+                ctx.fillStyle = 'hsla(300, 100%, 50%, 0.5)'; // Magenta
                 drawFn();
                 ctx.restore();
                 
                 ctx.save();
-                ctx.translate(chromaticOffset, 0);
-                // Cyan channel
-                ctx.fillStyle = '#00ffff';
-                ctx.shadowColor = '#00ffff';
+                ctx.translate(totalOffset, 0);
+                ctx.fillStyle = 'hsla(180, 100%, 50%, 0.5)'; // Cyan
                 drawFn();
                 ctx.restore();
                 
@@ -191,43 +226,42 @@ export class Renderer {
         };
 
         // --- RENDER LAYER: MID (Food) ---
-        if (state.globalFlash > 0 && gameState.food) {
-            ctx.save();
-            ctx.globalCompositeOperation = 'screen';
-            const gradient = ctx.createRadialGradient(
-                gameState.food.x * cellSize + cellSize/2, 
-                gameState.food.y * cellSize + cellSize/2, 
-                0, 
-                gameState.food.x * cellSize + cellSize/2, 
-                gameState.food.y * cellSize + cellSize/2, 
-                canvas.width * 0.8
-            );
-            gradient.addColorStop(0, `rgba(255, 255, 255, ${state.globalFlash})`);
-            gradient.addColorStop(1, 'rgba(0, 242, 255, 0)');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(-canvas.width, -canvas.height, canvas.width*3, canvas.height*3);
-            ctx.restore();
-        }
-
+        // Global flash rendered removed for 'Living Grid' aesthetic
+        
         if (gameState.food) {
             const f = gameState.food;
             const color = f.type === 'NORMAL' ? CONFIG.COLORS.food : CONFIG.POWERUPS[f.type].color;
+            const pulse = 1.0 + Math.sin(Date.now() / 120) * 0.25; // Faster, more intense pulse
             
-            ctx.shadowBlur = 20;
+            ctx.save();
+            ctx.shadowBlur = 50; // Increased bloom
             ctx.shadowColor = color;
-            ctx.fillStyle = color;
-            
-            // Pulse effect for food
-            const pulse = 1.0 + Math.sin(Date.now() / 150) * 0.1;
             
             const drawFood = () => {
+                const centerX = f.x * cellSize + cellSize / 2;
+                const centerY = f.y * cellSize + cellSize / 2;
+                const radius = (cellSize / 2.5) * pulse; // Larger base size
+
+                // Core orb
+                const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                grad.addColorStop(0, '#fff');
+                grad.addColorStop(0.2, color);
+                grad.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = grad;
                 ctx.beginPath();
-                ctx.arc(
-                    f.x * cellSize + cellSize / 2,
-                    f.y * cellSize + cellSize / 2,
-                    (cellSize / 2.5) * pulse,
-                    0, Math.PI * 2
-                );
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Multi-layered 'Energy' glow
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.globalAlpha = 0.2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * 2.5, 0, Math.PI * 2);
                 ctx.fill();
             };
             
@@ -236,26 +270,15 @@ export class Renderer {
             } else {
                 drawFood();
             }
-            
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(
-                f.x * cellSize + cellSize / 2,
-                f.y * cellSize + cellSize / 2,
-                cellSize / 6,
-                0, Math.PI * 2
-            );
-            ctx.fill();
+            ctx.restore();
         }
 
         // --- RENDER LAYER: FOREGROUND (Snake) ---
-        const snakeColor = state.activePowerup === 'GHOST' ? CONFIG.COLORS.snakeGhost : CONFIG.COLORS.snakeBody;
+        const isPhantomEffect = state.activePowerup === 'GHOST' || state.difficulty === 'PHANTOM';
+        const snakeColor = isPhantomEffect ? CONFIG.COLORS.snakeGhost : CONFIG.COLORS.snakeBody;
         
         gameState.snake.forEach((segment, index) => {
             const prevSegment = gameState.previousSnake[index] || segment;
-            
-            // Apply tail lag interpolation
             let segmentAlpha = alpha;
             if (index > 0) {
                 segmentAlpha = Math.max(0, alpha - (index * CONFIG.VISUALS.tailLag * 0.01));
@@ -264,43 +287,45 @@ export class Renderer {
             const pos = this.getInterpolatedPos(segment, prevSegment, segmentAlpha);
             const isHead = index === 0;
             
+            ctx.save();
             if (isHead) {
-                ctx.shadowBlur = 25;
+                ctx.shadowBlur = 60; // Max bloom for head
                 ctx.shadowColor = CONFIG.COLORS.snakeHead;
-                ctx.fillStyle = CONFIG.COLORS.snakeHead;
+                ctx.fillStyle = '#fff'; // Bright white core
             } else {
-                ctx.shadowBlur = 0;
+                ctx.shadowBlur = 20; // Increased body bloom
+                ctx.shadowColor = snakeColor;
                 ctx.fillStyle = snakeColor;
             }
 
-            const padding = isHead ? 0 : 1;
+            const padding = isHead ? 0 : 2;
             let w = cellSize - padding * 2;
             let h = cellSize - padding * 2;
             
-            // Squash and Stretch based on movement
             if (isHead && CONFIG.VISUALS.enabled) {
                 if (gameState.direction.x !== 0) {
                     w *= (1.0 + CONFIG.VISUALS.stretchAmount);
-                    h *= (1.0 - CONFIG.VISUALS.turnCompression * 0.2);
                 } else if (gameState.direction.y !== 0) {
                     h *= (1.0 + CONFIG.VISUALS.stretchAmount);
-                    w *= (1.0 - CONFIG.VISUALS.turnCompression * 0.2);
                 }
             }
 
-            const drawSegment = () => {
-                ctx.fillRect(
-                    pos.x * cellSize + padding + (cellSize - w)/2,
-                    pos.y * cellSize + padding + (cellSize - h)/2,
-                    w, h
-                );
-            };
+            const x = pos.x * cellSize + padding + (cellSize - w)/2;
+            const y = pos.y * cellSize + padding + (cellSize - h)/2;
+            const radius = isHead ? 4 : 2;
 
-            if (isHead && chromaticOffset > 0) {
-                drawWithChromatic(drawSegment);
-            } else {
-                drawSegment();
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, radius);
+            ctx.fill();
+            
+            if (isHead) {
+                // Head detail
+                ctx.fillStyle = snakeColor;
+                ctx.beginPath();
+                ctx.roundRect(x + 2, y + 2, w - 4, h - 4, radius);
+                ctx.fill();
             }
+            ctx.restore();
         });
 
         // --- RENDER LAYER: PARTICLES ---
