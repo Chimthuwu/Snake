@@ -7,6 +7,11 @@ export enum GameState {
     GAMEOVER = 'GAMEOVER'
 };
 
+export enum GameMode {
+    CLASSIC = 'CLASSIC',
+    LABYRINTH = 'LABYRINTH'
+};
+
 interface Vec {
     x: number;
     y: number;
@@ -36,6 +41,9 @@ class StateManager {
     portfolioMode: boolean = false;
     difficulty: string = 'NORMAL';
     isMuted: boolean = false;
+    theme: string = CONFIG.defaultTheme;
+    gameMode: GameMode = GameMode.CLASSIC;
+    walls: {x: number, y: number}[] = [];
     
     ripples: Ripple[] = [];
     cameraImpulse: Vec = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -48,6 +56,8 @@ class StateManager {
     constructor() {
         this.reset();
         this.highScore = parseInt(localStorage.getItem('neon_snake_highscore') || '0', 10);
+        this.theme = localStorage.getItem('neon_snake_theme') || CONFIG.defaultTheme;
+        this.gameMode = (localStorage.getItem('neon_snake_gamemode') as GameMode) || GameMode.CLASSIC;
     }
 
     reset() {
@@ -60,6 +70,7 @@ class StateManager {
         this.powerupTimer = 0;
         this.snakeLength = 3;
         this.entitiesCount = 0;
+        this.walls = [];
         
         // Visual FX State
         this.ripples = [];
@@ -69,6 +80,11 @@ class StateManager {
         this.globalFlash = 0;
         this.gridBrightness = 1.0;
         this.chromaticGlitch = 0;
+    }
+
+    setGameMode(mode: GameMode) {
+        this.gameMode = mode;
+        localStorage.setItem('neon_snake_gamemode', mode);
     }
 
     setHighScore(score: number): boolean {

@@ -48,6 +48,16 @@ interface VisualConfig {
     comboDecayTime: number;
 }
 
+interface ColorScheme {
+    bg: string;
+    grid: string;
+    snakeHead: string;
+    snakeBody: string;
+    snakeGhost: string;
+    food: string;
+    particles: string[];
+}
+
 interface Config {
     GRID_SIZE: number;
     DIFFICULTIES: { [key: string]: Difficulty };
@@ -56,15 +66,10 @@ interface Config {
     POWERUP_DURATION: number;
     POWERUPS: { [key: string]: Powerup };
     VISUALS: VisualConfig;
-    COLORS: {
-        bg: string;
-        grid: string;
-        snakeHead: string;
-        snakeBody: string;
-        snakeGhost: string;
-        food: string;
-        particles: string[];
-    };
+    THEMES: { [key: string]: ColorScheme };
+    defaultTheme: string;
+    LEVELS: { [key: string]: {x: number, y: number}[] };
+    defaultLevel: string;
     SHAKE_INTENSITY_EAT: number;
     SHAKE_INTENSITY_DEATH: number;
     SHAKE_DURATION_EAT: number;
@@ -91,7 +96,10 @@ export const CONFIG: Config = {
     POWERUPS: {
         SLOW: { id: 'SLOW', color: '#00ff41', name: 'TIME DILATION' },
         GHOST: { id: 'GHOST', color: '#b000ff', name: 'PHANTOM MODE' },
-        MULTIPLIER: { id: 'MULTIPLIER', color: '#ffea00', name: 'SCORE x2' }
+        MULTIPLIER: { id: 'MULTIPLIER', color: '#ffea00', name: 'SCORE x2' },
+        SHIELD: { id: 'SHIELD', color: '#00bfff', name: 'DEFLECTOR' },
+        MAGNET: { id: 'MAGNET', color: '#ff4500', name: 'FOOD ATTRACTOR' },
+        SHRINK: { id: 'SHRINK', color: '#DA70D6', name: 'COMPACT' }
     },
     
     // Visuals & Depth System
@@ -149,14 +157,50 @@ export const CONFIG: Config = {
         comboDecayTime: 1500
     },
 
-    COLORS: {
-        bg: 'hsl(240, 30%, 3%)',
-        grid: 'hsla(180, 100%, 50%, 0.15)',
-        snakeHead: 'hsl(180, 100%, 50%)',
-        snakeBody: 'hsla(180, 100%, 50%, 0.8)',
-        snakeGhost: 'hsla(280, 100%, 60%, 0.6)',
-        food: 'hsl(330, 100%, 50%)',
-        particles: ['hsl(180, 100%, 50%)', 'hsl(330, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(280, 100%, 60%)']
+    defaultTheme: 'NEON',
+    THEMES: {
+        NEON: {
+            bg: 'hsl(240, 30%, 3%)',
+            grid: 'hsla(180, 100%, 50%, 0.15)',
+            snakeHead: 'hsl(180, 100%, 50%)',
+            snakeBody: 'hsla(180, 100%, 50%, 0.8)',
+            snakeGhost: 'hsla(280, 100%, 60%, 0.6)',
+            food: 'hsl(330, 100%, 50%)',
+            particles: ['hsl(180, 100%, 50%)', 'hsl(330, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(280, 100%, 60%)']
+        },
+        EMBER: {
+            bg: 'hsl(20, 40%, 5%)',
+            grid: 'hsla(30, 100%, 50%, 0.15)',
+            snakeHead: 'hsl(45, 100%, 50%)',
+            snakeBody: 'hsla(30, 100%, 50%, 0.8)',
+            snakeGhost: 'hsla(300, 100%, 60%, 0.6)',
+            food: 'hsl(150, 100%, 50%)',
+            particles: ['hsl(45, 100%, 50%)', 'hsl(30, 100%, 50%)', 'hsl(10, 100%, 50%)']
+        },
+        OCEAN: {
+            bg: 'hsl(220, 50%, 10%)',
+            grid: 'hsla(200, 100%, 50%, 0.15)',
+            snakeHead: 'hsl(190, 100%, 60%)',
+            snakeBody: 'hsla(210, 100%, 60%, 0.8)',
+            snakeGhost: 'hsla(250, 100%, 70%, 0.6)',
+            food: 'hsl(100, 100%, 50%)',
+            particles: ['hsl(190, 100%, 60%)', 'hsl(210, 100%, 60%)', 'hsl(100, 100%, 50%)']
+        }
+    },
+
+    defaultLevel: 'EMPTY',
+    LEVELS: {
+        EMPTY: [],
+        BOX: [
+            {x: 5, y: 5}, {x: 6, y: 5}, {x: 7, y: 5}, {x: 8, y: 5}, {x: 9, y: 5}, {x: 10, y: 5}, {x: 11, y: 5}, {x: 12, y: 5}, {x: 13, y: 5}, {x: 14, y: 5},
+            {x: 5, y: 14}, {x: 6, y: 14}, {x: 7, y: 14}, {x: 8, y: 14}, {x: 9, y: 14}, {x: 10, y: 14}, {x: 11, y: 14}, {x: 12, y: 14}, {x: 13, y: 14}, {x: 14, y: 14},
+            {x: 5, y: 6}, {x: 5, y: 7}, {x: 5, y: 8}, {x: 5, y: 9}, {x: 5, y: 10}, {x: 5, y: 11}, {x: 5, y: 12}, {x: 5, y: 13},
+            {x: 14, y: 6}, {x: 14, y: 7}, {x: 14, y: 8}, {x: 14, y: 9}, {x: 14, y: 10}, {x: 14, y: 11}, {x: 14, y: 12}, {x: 14, y: 13},
+        ],
+        TUNNELS: [
+            {x: 0, y: 9}, {x: 1, y: 9}, {x: 2, y: 9}, {x: 3, y: 9}, {x: 4, y: 9}, {x: 5, y: 9}, {x: 6, y: 9},
+            {x: 13, y: 9}, {x: 14, y: 9}, {x: 15, y: 9}, {x: 16, y: 9}, {x: 17, y: 9}, {x: 18, y: 9}, {x: 19, y: 9},
+        ]
     },
     
     // Screen Shake

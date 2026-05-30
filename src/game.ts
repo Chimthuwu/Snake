@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { state, GameState } from './state';
+import { state, GameState, GameMode } from './state';
 import { InputManager } from './input';
 import { Renderer } from './renderer.js';
 import { UIManager } from './ui.js';
@@ -25,6 +25,12 @@ class Game {
     }
 
     resetGameData() {
+        if (state.gameMode === GameMode.LABYRINTH) {
+            state.walls = CONFIG.LEVELS['BOX']; // hardcoded for now
+        } else {
+            state.walls = [];
+        }
+
         this.snake = [
             { x: 10, y: 10 },
             { x: 10, y: 11 },
@@ -47,7 +53,9 @@ class Game {
                 x: Math.floor(Math.random() * CONFIG.GRID_SIZE),
                 y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
             };
-            valid = !this.snake.some(s => s.x === newFood.x && s.y === newFood.y);
+            const onSnake = this.snake.some(s => s.x === newFood.x && s.y === newFood.y);
+            const onWall = state.walls.some(w => w.x === newFood.x && w.y === newFood.y);
+            valid = !onSnake && !onWall;
         }
 
         // Determine type
@@ -90,6 +98,7 @@ class Game {
 
     start() {
         audio.resume();
+        audio.playMusic();
         this.resetGameData();
         state.current = GameState.PLAYING;
         this.ui.updateScreens();
@@ -110,6 +119,15 @@ class Game {
     }
 
     gameOver() {
+        // Shield Check
+        if (state.activePowerup === 'SHIELD') {
+            state.activePowerup = null;
+            state.powerupTimer = 0;
+            if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_EAT * 2, CONFIG.SHAKE_DURATION_EAT * 2);
+            // TODO: play shield break sound
+            return;
+        }
+
         audio.playDie();
         if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_DEATH, CONFIG.SHAKE_DURATION_DEATH);
         state.setHighScore(state.score);
@@ -135,6 +153,20 @@ class Game {
         // Update Powerups
         if (state.activePowerup) {
             state.powerupTimer -= dt;
+
+            // Magnet effect
+            if (state.activePowerup === 'MAGNET' && this.food) {
+                const head = this.snake[0];
+                const dx = head.x - this.food.x;
+                const dy = head.y - this.food.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 1) { // Only pull if not already on top
+                    // Move food towards snake head. The divisor controls speed.
+                    this.food.x += dx / dist * (dist / 15); 
+                    this.food.y += dy / dist * (dist / 15);
+                }
+            }
+
             if (state.powerupTimer <= 0) {
                 state.activePowerup = null;
                 // Reset tick rate if slow was active
@@ -178,8 +210,17 @@ class Game {
 
         // Update flash and glitch
         if (state.globalFlash > 0) state.globalFlash -= dt / 500;
-        if (state.gridBrightness > 1.0) state.gridBrightness -= dt / 1000;
+        if (state.gridBrightness > 1.0) state.gridBrightness -= dt / 200; // Faster decay
         if (state.chromaticGlitch > 0) state.chromaticGlitch -= dt / 200;
+
+        // Audio-reactive effects
+        const audioData = audio.getAudioData();
+        if (audioData) {
+            // Get bass level (avg of first few frequency bins)
+            const bass = (audioData[0] + audioData[1] + audioData[2]) / 3 / 255;
+            state.gridBrightness += bass * 0.5;
+        }
+
 
         state.entitiesCount = this.snake.length + this.particles.length + state.ripples.length + 1;
     }
@@ -267,6 +308,12 @@ class Game {
         const isPhantom = state.difficulty === 'PHANTOM' || state.activePowerup === 'GHOST';
         
         // Wall collision
+        const hitWall = state.walls.some(w => w.x === newHead.x && w.y === newHead.y);
+        if (hitWall && !isPhantom) {
+            this.gameOver();
+            return;
+        }
+
         if (newHead.x < 0 || newHead.x >= CONFIG.GRID_SIZE || newHead.y < 0 || newHead.y >= CONFIG.GRID_SIZE) {
             if (isPhantom) {
                 newHead.x = (newHead.x + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
@@ -300,13 +347,16 @@ class Game {
         this.snake.unshift(newHead);
 
         // Food collision
-        if (newHead.x === this.food.x && newHead.y === this.food.y) {
+        const ateFood = this.food && Math.abs(newHead.x - this.food.x) < 1 && Math.abs(newHead.y - this.food.y) < 1;
+
+        if (ateFood) {
             if (state.current !== GameState.MENU) {
                 audio.playEat(state.combo);
                 if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_EAT, CONFIG.SHAKE_DURATION_EAT);
             }
             
-            const color = this.food.type === 'NORMAL' ? CONFIG.COLORS.food : CONFIG.POWERUPS[this.food.type].color;
+            const foodType = this.food.type;
+            const color = foodType === 'NORMAL' ? CONFIG.THEMES[state.theme].food : CONFIG.POWERUPS[foodType].color;
             this.spawnParticles(newHead.x, newHead.y, color, state.combo);
             
             // Trigger Grid Ripple & Flashes
@@ -323,17 +373,32 @@ class Game {
             }
 
             // Handle Powerup
-            if (this.food.type !== 'NORMAL') {
+            if (foodType !== 'NORMAL') {
                 if (state.current !== GameState.MENU) audio.playPowerup();
-                state.activePowerup = this.food.type;
-                state.powerupTimer = CONFIG.POWERUP_DURATION;
+                
+                if (foodType === 'SHRINK') {
+                    // Instant effect for Shrink
+                    const amountToShrink = 3;
+                    if (this.snake.length > amountToShrink + 1) {
+                        for (let i = 0; i < amountToShrink; i++) {
+                            this.snake.pop();
+                        }
+                        state.snakeLength = this.snake.length;
+                    }
+                } else {
+                    // Timed effect for others
+                    state.activePowerup = foodType;
+                    state.powerupTimer = CONFIG.POWERUP_DURATION;
+                }
             }
 
             // Score & Combo
-            state.addScore(10 * CONFIG.DIFFICULTIES[state.difficulty].scoreMult);
-            state.combo++;
-            state.comboTimer = state.comboTimerMax;
-            if (state.current !== GameState.MENU) this.ui.triggerComboPop();
+            if (state.current !== GameState.MENU) {
+                state.addScore(10 * CONFIG.DIFFICULTIES[state.difficulty].scoreMult);
+                state.combo++;
+                state.comboTimer = state.comboTimerMax;
+                this.ui.triggerComboPop();
+            }
             
             // Speed up
             this.tickRate = Math.max(

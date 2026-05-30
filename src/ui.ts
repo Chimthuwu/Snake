@@ -1,4 +1,4 @@
-import { state, GameState } from './state';
+import { state, GameState, GameMode } from './state';
 import { CONFIG } from './config';
 import { audio } from './audio';
 
@@ -27,6 +27,8 @@ export class UIManager {
     btnMute: HTMLElement;
     btnMusic: HTMLElement;
     btnPortfolio: HTMLElement;
+    btnTheme: HTMLElement;
+    btnGameMode: HTMLElement;
     
     btnStart: HTMLElement;
     btnResume: HTMLElement;
@@ -70,6 +72,8 @@ export class UIManager {
         this.btnMute = document.getElementById('btn-mute-toggle')!;
         this.btnMusic = document.getElementById('btn-music-toggle')!;
         this.btnPortfolio = document.getElementById('btn-portfolio-toggle')!;
+        this.btnTheme = document.getElementById('btn-theme-toggle')!;
+        this.btnGameMode = document.getElementById('btn-gamemode-toggle')!;
         
         this.btnStart = document.getElementById('btn-start')!;
         this.btnResume = this.pauseScreen.querySelector('#btn-resume')!;
@@ -77,7 +81,7 @@ export class UIManager {
         this.btnRestart = this.gameoverScreen.querySelector('#btn-restart')!;
         this.btnMenu = this.gameoverScreen.querySelector('#btn-menu')!;
         
-        [this.btnStart, this.btnResume, this.btnQuit, this.btnRestart, this.btnMenu, this.btnDiff, this.btnMute, this.btnMusic, this.btnPortfolio].forEach(btn => {
+        [this.btnStart, this.btnResume, this.btnQuit, this.btnRestart, this.btnMenu, this.btnDiff, this.btnMute, this.btnMusic, this.btnPortfolio, this.btnTheme, this.btnGameMode].forEach(btn => {
             if (btn) {
                 btn.style.setProperty('pointer-events', 'auto', 'important');
                 btn.style.setProperty('z-index', '1000', 'important');
@@ -154,6 +158,25 @@ export class UIManager {
             }
         });
 
+        this.btnTheme.addEventListener('click', () => {
+            audio.playUIHover();
+            const themes = Object.keys(CONFIG.THEMES);
+            let idx = themes.indexOf(state.theme);
+            idx = (idx + 1) % themes.length;
+            state.theme = themes[idx];
+            localStorage.setItem('neon_snake_theme', state.theme);
+            this.btnTheme.textContent = state.theme;
+        });
+
+        this.btnGameMode.addEventListener('click', () => {
+            audio.playUIHover();
+            const modes = Object.values(GameMode);
+            let idx = modes.indexOf(state.gameMode);
+            idx = (idx + 1) % modes.length;
+            state.setGameMode(modes[idx]);
+            this.btnGameMode.textContent = state.gameMode;
+        });
+
         // Difficulty Toggle
         const diffs = Object.keys(CONFIG.DIFFICULTIES);
         this.btnDiff.addEventListener('click', () => {
@@ -222,6 +245,8 @@ export class UIManager {
                 document.getElementById('main-menu-panel').style.zIndex = '2001';
                 document.querySelector('.menu-options').style.pointerEvents = 'auto';
                 this.btnDiff.textContent = state.difficulty;
+                this.btnTheme.textContent = state.theme;
+                this.btnGameMode.textContent = state.gameMode;
                 document.getElementById('game-canvas').style.pointerEvents = 'none';
                 this.updateMenuButtons();
                 break;
@@ -252,7 +277,7 @@ export class UIManager {
     updateMenuButtons() {
         switch (state.current) {
             case GameState.MENU:
-                this.menuButtons = [this.btnStart, this.btnDiff, this.btnPortfolio, this.btnMute].filter(b => b);
+                this.menuButtons = [this.btnStart, this.btnDiff, this.btnTheme, this.btnGameMode, this.btnPortfolio, this.btnMute].filter(b => b);
                 break;
             case GameState.PAUSED:
                 this.menuButtons = [this.btnResume, this.btnQuit, this.btnPortfolio, this.btnMute].filter(b => b);

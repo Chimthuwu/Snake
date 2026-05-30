@@ -6,12 +6,18 @@ class AudioManager {
     musicTracks: string[];
     currentTrackIndex: number;
     musicPlayer: HTMLAudioElement;
+    analyser: AnalyserNode | null;
+    source: MediaElementAudioSourceNode | null;
+    frequencyData: Uint8Array | null;
 
     constructor() {
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
         this.masterGain.connect(this.ctx.destination);
         this.masterGain.gain.value = 0.3;
+        this.analyser = null;
+        this.source = null;
+        this.frequencyData = null;
 
         // Music support
         this.musicTracks = [
@@ -28,13 +34,34 @@ class AudioManager {
         ];
         this.currentTrackIndex = 0;
         this.musicPlayer = new Audio();
+        this.musicPlayer.crossOrigin = "anonymous";
         this.musicPlayer.loop = false;
         this.musicPlayer.onended = () => this.nextTrack();
         this.musicPlayer.volume = 0.2;
     }
 
+    setupAnalyser() {
+        if (this.source) return;
+        this.source = this.ctx.createMediaElementSource(this.musicPlayer);
+        this.analyser = this.ctx.createAnalyser();
+        this.analyser.fftSize = 256;
+        const bufferLength = this.analyser.frequencyBinCount;
+        this.frequencyData = new Uint8Array(bufferLength);
+        this.source.connect(this.analyser);
+        this.analyser.connect(this.masterGain);
+    }
+
+    getAudioData(): Uint8Array | null {
+        if (this.analyser && this.frequencyData) {
+            this.analyser.getByteFrequencyData(this.frequencyData);
+            return this.frequencyData;
+        }
+        return null;
+    }
+
     playMusic(): void {
         if (state.isMuted) return;
+        this.setupAnalyser();
         this.musicPlayer.src = this.musicTracks[this.currentTrackIndex];
         this.musicPlayer.play().catch(e => console.log('Music play blocked', e));
     }
