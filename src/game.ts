@@ -25,6 +25,8 @@ class Game {
     }
 
     resetGameData() {
+        state.reset();
+        
         if (state.gameMode === GameMode.LABYRINTH) {
             state.walls = CONFIG.LEVELS['BOX']; // hardcoded for now
         } else {
@@ -41,7 +43,6 @@ class Game {
         this.tickRate = CONFIG.DIFFICULTIES[state.difficulty].baseTick;
         this.input.reset();
         this.particles = [];
-        state.reset();
         this.ui.updateHUD();
     }
 

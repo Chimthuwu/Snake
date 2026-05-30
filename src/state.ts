@@ -70,7 +70,6 @@ class StateManager {
         this.powerupTimer = 0;
         this.snakeLength = 3;
         this.entitiesCount = 0;
-        this.walls = [];
         
         // Visual FX State
         this.ripples = [];

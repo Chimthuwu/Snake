@@ -21,16 +21,16 @@ class AudioManager {
 
         // Music support
         this.musicTracks = [
-            'music/Afternoon Glow - Lyserge (ft Olga).mp3',
-            'music/In this safe - serge rybak.mp3',
-            'music/Land On Your NEW.mp3',
-            'music/LED Juggling_(Doof)_19.mp3',
-            'music/Lil lamplight.mp3',
-            'music/Low Low Rumble.mp3',
-            'music/Melancholics Anonymous - S3rge Rybak.mp3',
-            'music/Memowave.mp3',
-            'music/Scrambled Circuitry - Serg [FREE DL].mp3',
-            'music/The Purge - Lyserge.mp3'
+            '/music/Afternoon Glow - Lyserge (ft Olga).mp3',
+            '/music/In this safe - serge rybak.mp3',
+            '/music/Land On Your NEW.mp3',
+            '/music/LED Juggling_(Doof)_19.mp3',
+            '/music/Lil lamplight.mp3',
+            '/music/Low Low Rumble.mp3',
+            '/music/Melancholics Anonymous - S3rge Rybak.mp3',
+            '/music/Memowave.mp3',
+            '/music/Scrambled Circuitry - Serg [FREE DL].mp3',
+            '/music/The Purge - Lyserge.mp3'
         ];
         this.currentTrackIndex = 0;
         this.musicPlayer = new Audio();
