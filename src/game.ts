@@ -106,7 +106,7 @@ class Game {
         if (!validSpawn) {
             // Fallback: if no safe spawn found after maxAttempts, use a default safe spawn
             this.snake = [{x: 1, y: 1}, {x: 1, y: 2}, {x: 1, y: 3}];
-            initialDirection = { x: 0, y: -1 }; // Default direction for fallback
+            initialDirection = { x: 1, y: 0 }; // Default direction for fallback
         }
 
         this.previousSnake = JSON.parse(JSON.stringify(this.snake));
@@ -116,10 +116,9 @@ class Game {
         this.input.setDirection(initialDirection); // Set initial direction after spawn
         this.particles = [];
         this.ui.updateHUD();
-    }
-    }
+        }
 
-    generateFood() {
+        generateFood() {
         let newFood;
         let valid = false;
         while (!valid) {
@@ -131,7 +130,6 @@ class Game {
             const onWall = state.walls.some(w => w.x === newFood.x && w.y === newFood.y);
             valid = !onSnake && !onWall;
         }
-
         // Determine type
         if (Math.random() < CONFIG.POWERUP_CHANCE) {
             const types = Object.keys(CONFIG.POWERUPS);
