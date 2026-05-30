@@ -28,7 +28,9 @@ class Game {
         state.reset();
         
         if (state.gameMode === GameMode.LABYRINTH) {
-            state.walls = CONFIG.LEVELS['TUNNELS'];
+            const labyrinthLevels = Object.keys(CONFIG.LEVELS).filter(k => k !== 'EMPTY');
+            const randomLevelKey = labyrinthLevels[Math.floor(Math.random() * labyrinthLevels.length)];
+            state.walls = CONFIG.LEVELS[randomLevelKey];
         } else {
             state.walls = [];
         }
