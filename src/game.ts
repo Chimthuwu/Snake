@@ -35,17 +35,88 @@ class Game {
             state.walls = [];
         }
 
-        this.snake = [
-            { x: 1, y: 1 },
-            { x: 1, y: 2 },
-            { x: 1, y: 3 }
-        ];
+        this.snake = [];
+        let startX, startY;
+        let initialDirection = { x: 1, y: 0 }; // Default to right
+        let validSpawn = false;
+        const initialSnakeLength = 3;
+
+        // Try to find a safe spawn location
+        let attempts = 0;
+        const maxAttempts = 100;
+        while (!validSpawn && attempts < maxAttempts) {
+            attempts++;
+            // Randomize starting corner a bit to reduce predictability
+            const corner = Math.floor(Math.random() * 4);
+            switch(corner) {
+                case 0: // Top-leftish
+                    startX = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + 1;
+                    startY = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + 1;
+                    initialDirection = { x: 1, y: 0 };
+                    break;
+                case 1: // Top-rightish
+                    startX = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + CONFIG.GRID_SIZE * 3 / 4 - initialSnakeLength;
+                    startY = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + 1;
+                    initialDirection = { x: -1, y: 0 };
+                    break;
+                case 2: // Bottom-leftish
+                    startX = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + 1;
+                    startY = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + CONFIG.GRID_SIZE * 3 / 4 - initialSnakeLength;
+                    initialDirection = { x: 0, y: -1 };
+                    break;
+                case 3: // Bottom-rightish
+                    startX = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + CONFIG.GRID_SIZE * 3 / 4 - initialSnakeLength;
+                    startY = Math.floor(Math.random() * (CONFIG.GRID_SIZE / 4)) + CONFIG.GRID_SIZE * 3 / 4 - initialSnakeLength;
+                    initialDirection = { x: -1, y: 0 }; // Adjusted for bottom-right
+                    break;
+            }
+            
+            // Generate potential snake segments based on start and direction
+            let tempSnake = [];
+            for (let i = 0; i < initialSnakeLength; i++) {
+                tempSnake.push({
+                    x: startX - initialDirection.x * i,
+                    y: startY - initialDirection.y * i
+                });
+            }
+
+            // Check if potential snake overlaps with walls or boundaries
+            validSpawn = true;
+            for (let segment of tempSnake) {
+                if (segment.x < 0 || segment.x >= CONFIG.GRID_SIZE ||
+                    segment.y < 0 || segment.y >= CONFIG.GRID_SIZE ||
+                    state.walls.some(w => w.x === segment.x && w.y === segment.y)) {
+                    validSpawn = false;
+                    break;
+                }
+            }
+            // Check the square *just ahead* of the head too
+            const nextHeadPos = { x: tempSnake[0].x + initialDirection.x, y: tempSnake[0].y + initialDirection.y };
+            if (nextHeadPos.x < 0 || nextHeadPos.x >= CONFIG.GRID_SIZE ||
+                nextHeadPos.y < 0 || nextHeadPos.y >= CONFIG.GRID_SIZE ||
+                state.walls.some(w => w.x === nextHeadPos.x && w.y === nextHeadPos.y)) {
+                validSpawn = false;
+            }
+
+            if (validSpawn) {
+                this.snake = tempSnake;
+            }
+        }
+
+        if (!validSpawn) {
+            // Fallback: if no safe spawn found after maxAttempts, use a default safe spawn
+            this.snake = [{x: 1, y: 1}, {x: 1, y: 2}, {x: 1, y: 3}];
+            initialDirection = { x: 0, y: -1 }; // Default direction for fallback
+        }
+
         this.previousSnake = JSON.parse(JSON.stringify(this.snake));
-        this.food = this.generateFood();
+        this.food = this.generateFood(); // Food generation already checks for walls and snake
         this.tickRate = CONFIG.DIFFICULTIES[state.difficulty].baseTick;
         this.input.reset();
+        this.input.setDirection(initialDirection); // Set initial direction after spawn
         this.particles = [];
         this.ui.updateHUD();
+    }
     }
 
     generateFood() {
