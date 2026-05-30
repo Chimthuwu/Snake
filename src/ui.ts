@@ -1,54 +1,81 @@
-import { state, GameState } from './state.js';
-import { CONFIG } from './config.js';
-import { audio } from './audio.js';
+import { state, GameState } from './state';
+import { CONFIG } from './config';
+import { audio } from './audio';
 
 export class UIManager {
-    constructor(game) {
+    game: any;
+    menuScreen: HTMLElement;
+    pauseScreen: HTMLElement;
+    gameoverScreen: HTMLElement;
+    hud: HTMLElement;
+    uiLayer: HTMLElement;
+    portfolioOverlay: HTMLElement;
+    vignetteOverlay: HTMLElement;
+    
+    scoreVal: HTMLElement;
+    comboVal: HTMLElement;
+    comboBarFill: HTMLElement;
+    highscoreVal: HTMLElement;
+    goScore: HTMLElement;
+    goCombo: HTMLElement;
+    
+    powerupIndicator: HTMLElement;
+    powerupName: HTMLElement;
+    powerupBarFill: HTMLElement;
+    
+    btnDiff: HTMLElement;
+    btnMute: HTMLElement;
+    btnMusic: HTMLElement;
+    btnPortfolio: HTMLElement;
+    
+    btnStart: HTMLElement;
+    btnResume: HTMLElement;
+    btnQuit: HTMLElement;
+    btnRestart: HTMLElement;
+    btnMenu: HTMLElement;
+    
+    panels: NodeList;
+    menuButtons: HTMLElement[];
+    selectedButtonIndex: number;
+
+    constructor(game: any) {
         this.game = game;
         
         // Screens
-        this.menuScreen = document.getElementById('menu-screen');
+        this.menuScreen = document.getElementById('menu-screen')!;
         this.menuScreen.style.pointerEvents = 'none';
-        this.pauseScreen = document.getElementById('pause-screen');
+        this.pauseScreen = document.getElementById('pause-screen')!;
         this.pauseScreen.style.pointerEvents = 'none';
-        this.gameoverScreen = document.getElementById('gameover-screen');
+        this.gameoverScreen = document.getElementById('gameover-screen')!;
         this.gameoverScreen.style.pointerEvents = 'none';
-        this.hud = document.getElementById('hud');
-        this.uiLayer = document.getElementById('ui-layer');
+        this.hud = document.getElementById('hud')!;
+        this.uiLayer = document.getElementById('ui-layer')!;
         this.uiLayer.style.pointerEvents = 'auto';
-        this.portfolioOverlay = document.getElementById('portfolio-overlay');
-        this.vignetteOverlay = document.getElementById('vignette-overlay');
+        this.portfolioOverlay = document.getElementById('portfolio-overlay')!;
+        this.vignetteOverlay = document.getElementById('vignette-overlay')!;
         
         // Elements
-        this.scoreVal = document.getElementById('score-val');
-        this.comboVal = document.getElementById('combo-val');
-        this.comboBarFill = document.getElementById('combo-bar-fill');
-        this.highscoreVal = document.getElementById('highscore-val');
-        this.goScore = document.getElementById('go-score');
-        this.goCombo = document.getElementById('go-combo');
+        this.scoreVal = document.getElementById('score-val')!;
+        this.comboVal = document.getElementById('combo-val')!;
+        this.comboBarFill = document.getElementById('combo-bar-fill')!;
+        this.highscoreVal = document.getElementById('highscore-val')!;
+        this.goScore = document.getElementById('go-score')!;
+        this.goCombo = document.getElementById('go-combo')!;
         
-        this.powerupIndicator = document.getElementById('powerup-indicator');
-        this.powerupName = document.getElementById('powerup-name');
-        this.powerupBarFill = document.getElementById('powerup-bar-fill');
+        this.powerupIndicator = document.getElementById('powerup-indicator')!;
+        this.powerupName = document.getElementById('powerup-name')!;
+        this.powerupBarFill = document.getElementById('powerup-bar-fill')!;
         
-        this.btnDiff = document.getElementById('btn-diff');
-        this.btnMute = document.getElementById('btn-mute-toggle');
-        this.btnMusic = document.getElementById('btn-music-toggle'); // Added
-        this.btnPortfolio = document.getElementById('btn-portfolio-toggle');
+        this.btnDiff = document.getElementById('btn-diff')!;
+        this.btnMute = document.getElementById('btn-mute-toggle')!;
+        this.btnMusic = document.getElementById('btn-music-toggle')!;
+        this.btnPortfolio = document.getElementById('btn-portfolio-toggle')!;
         
-        this.btnStart = document.getElementById('btn-start');
-        this.btnResume = this.pauseScreen.querySelector('#btn-resume');
-        this.btnQuit = this.pauseScreen.querySelector('#btn-quit');
-        this.btnRestart = this.gameoverScreen.querySelector('#btn-restart');
-        this.btnMenu = this.gameoverScreen.querySelector('#btn-menu');
-        
-        console.log('Buttons:', {
-            btnStart: this.btnStart,
-            btnResume: this.btnResume,
-            btnQuit: this.btnQuit,
-            btnRestart: this.btnRestart,
-            btnMenu: this.btnMenu
-        });
+        this.btnStart = document.getElementById('btn-start')!;
+        this.btnResume = this.pauseScreen.querySelector('#btn-resume')!;
+        this.btnQuit = this.pauseScreen.querySelector('#btn-quit')!;
+        this.btnRestart = this.gameoverScreen.querySelector('#btn-restart')!;
+        this.btnMenu = this.gameoverScreen.querySelector('#btn-menu')!;
         
         [this.btnStart, this.btnResume, this.btnQuit, this.btnRestart, this.btnMenu, this.btnDiff, this.btnMute, this.btnMusic, this.btnPortfolio].forEach(btn => {
             if (btn) {
