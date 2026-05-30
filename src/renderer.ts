@@ -14,8 +14,6 @@ export class Renderer {
         
         // Depth System State
         this.currentTilt = { x: 0, y: 0 };
-        
-        // Rave FX state
     }
 
     resize() {
@@ -31,21 +29,13 @@ export class Renderer {
         this.shakeTime = duration;
     }
 
-    // Smoothly interpolate between previous and current grid positions
     getInterpolatedPos(curr, prev, alpha) {
         if (!prev) return curr;
-        
         let dx = curr.x - prev.x;
         let dy = curr.y - prev.y;
-        
-        // Handle wrapping around edges (Ghost mode)
         if (Math.abs(dx) > 1) dx = dx > 0 ? -1 : 1;
         if (Math.abs(dy) > 1) dy = dy > 0 ? -1 : 1;
-        
-        return {
-            x: prev.x + dx * alpha,
-            y: prev.y + dy * alpha
-        };
+        return { x: prev.x + dx * alpha, y: prev.y + dy * alpha };
     }
 
     drawGrid(ctx, cellSize, colors) {
@@ -55,20 +45,16 @@ export class Renderer {
         const getPoint = (ix, iy) => {
             let px = ix * cellSize;
             let py = iy * cellSize;
-            
-            // 1. Electric Jitter
             const jitterX = (Math.random() - 0.5) * CONFIG.VISUALS.gridJitterAmplitude;
             const jitterY = (Math.random() - 0.5) * CONFIG.VISUALS.gridJitterAmplitude;
             px += jitterX;
             py += jitterY;
 
-            // 2. Grid Ripples
             state.ripples.forEach(r => {
                 const dx = ix - r.x;
                 const dy = iy - r.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 const maxDist = (1.0 - r.life) * CONFIG.GRID_SIZE * CONFIG.VISUALS.rippleSpeed;
-                
                 if (dist < maxDist && dist > maxDist - 4) {
                     const force = Math.sin((dist - maxDist) * Math.PI) * r.life * CONFIG.VISUALS.rippleStrength;
                     if (dist > 0) {
@@ -83,30 +69,23 @@ export class Renderer {
         ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1.2;
 
-        // Render Lines
         for (let i = 0; i <= CONFIG.GRID_SIZE; i++) {
-            // Vertical
             ctx.beginPath();
             for (let j = 0; j <= CONFIG.GRID_SIZE; j++) {
                 const p = getPoint(i, j);
-                if (j === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
+                if (j === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
             }
             ctx.stroke();
 
-            // Horizontal
             ctx.beginPath();
             for (let j = 0; j <= CONFIG.GRID_SIZE; j++) {
                 const p = getPoint(j, i);
-                if (j === 0) ctx.moveTo(p.x, p.y);
-                else ctx.lineTo(p.x, p.y);
+                if (j === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
             }
             ctx.stroke();
         }
 
-
-        // High-energy 'pips' at intersections
-        ctx.fillStyle = colors.snakeHead; // Use a bright color from the theme
+        ctx.fillStyle = colors.snakeHead;
         for (let i = 0; i <= CONFIG.GRID_SIZE; i++) {
             for (let j = 0; j <= CONFIG.GRID_SIZE; j++) {
                 const p = getPoint(i, j);
@@ -119,19 +98,14 @@ export class Renderer {
 
     drawWalls(ctx, cellSize, colors) {
         if (state.walls.length === 0) return;
-
-        ctx.fillStyle = colors.snakeHead; // Use a bright, contrasting color
+        ctx.fillStyle = colors.snakeHead;
         ctx.shadowBlur = 20;
         ctx.shadowColor = colors.snakeHead;
-
         state.walls.forEach(wall => {
-            const x = wall.x * cellSize;
-            const y = wall.y * cellSize;
             ctx.beginPath();
-            ctx.rect(x, y, cellSize, cellSize);
+            ctx.rect(wall.x * cellSize, wall.y * cellSize, cellSize, cellSize);
             ctx.fill();
         });
-
         ctx.shadowBlur = 0;
     }
 
@@ -140,23 +114,14 @@ export class Renderer {
         const alpha = Math.min(1.0, accumulator / tickRate);
         const colors = CONFIG.THEMES[state.theme];
 
-        // Clear background
         ctx.fillStyle = colors.bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
 
-        if (CONFIG.VISUALS.enabled) {
-            // ... (Camera and other visual effects logic remains the same)
-        }
-
-        // --- RENDER LAYER: FAR (Grid) ---
         this.drawGrid(ctx, cellSize, colors);
         this.drawWalls(ctx, cellSize, colors);
 
-        // ... (Chromatic aberration logic remains the same)
-
-        // --- RENDER LAYER: MID (Food) ---
         if (gameState.food) {
             const f = gameState.food;
             const foodColor = f.type === 'NORMAL' ? colors.food : CONFIG.POWERUPS[f.type].color;
@@ -166,11 +131,33 @@ export class Renderer {
             ctx.shadowBlur = 50;
             ctx.shadowColor = foodColor;
             
-            // ... (Food drawing logic remains the same, but uses foodColor)
+            const centerX = f.x * cellSize + cellSize / 2;
+            const centerY = f.y * cellSize + cellSize / 2;
+            const radius = (cellSize / 2.5) * pulse;
+
+            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            grad.addColorStop(0, '#fff');
+            grad.addColorStop(0.2, foodColor);
+            grad.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 1.8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.restore();
         }
 
-        // --- RENDER LAYER: FOREGROUND (Snake) ---
         const isPhantomEffect = state.activePowerup === 'GHOST' || state.difficulty === 'PHANTOM';
         const snakeHeadColor = colors.snakeHead;
         const snakeBodyColor = isPhantomEffect ? colors.snakeGhost : colors.snakeBody;
@@ -196,23 +183,35 @@ export class Renderer {
                 ctx.fillStyle = snakeBodyColor;
             }
 
-            // ... (Snake segment drawing logic remains the same)
+            const padding = isHead ? 0 : 2;
+            let w = cellSize - padding * 2;
+            let h = cellSize - padding * 2;
+            
+            if (isHead && CONFIG.VISUALS.enabled) {
+                if (gameState.direction.x !== 0) w *= (1.0 + CONFIG.VISUALS.stretchAmount);
+                else if (gameState.direction.y !== 0) h *= (1.0 + CONFIG.VISUALS.stretchAmount);
+            }
 
+            const x = pos.x * cellSize + padding + (cellSize - w)/2;
+            const y = pos.y * cellSize + padding + (cellSize - h)/2;
+            const radius = isHead ? 4 : 2;
+
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, radius);
             ctx.fill();
             
             if (isHead) {
-                // Head detail
                 ctx.fillStyle = snakeBodyColor;
-                // ... (Head detail drawing logic remains the same)
+                ctx.beginPath();
+                ctx.roundRect(x + 2, y + 2, w - 4, h - 4, radius);
                 ctx.fill();
             }
             ctx.restore();
         });
 
-        // --- RENDER LAYER: PARTICLES ---
         ctx.shadowBlur = 15;
         particles.forEach(p => {
-            ctx.shadowColor = p.color; // Particle color is set on spawn, might not match theme
+            ctx.shadowColor = p.color;
             ctx.fillStyle = p.color;
             ctx.globalAlpha = p.life / p.maxLife;
             
@@ -220,10 +219,12 @@ export class Renderer {
             ctx.arc(p.x * cellSize, p.y * cellSize, p.size, 0, Math.PI * 2);
             ctx.fill();
         });
-        ctx.globalAlpha = 1.0;
-        ctx.shadowBlur = 0;
 
-        // ... (Debug overlay logic remains the same)
+        if (state.portfolioMode) {
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        }
 
         ctx.restore();
     }
