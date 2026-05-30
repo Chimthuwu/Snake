@@ -354,11 +354,11 @@ class Game {
                 audio.playEat(state.combo);
                 if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_EAT, CONFIG.SHAKE_DURATION_EAT);
             }
-            
+
             const foodType = this.food.type;
             const color = foodType === 'NORMAL' ? CONFIG.THEMES[state.theme].food : CONFIG.POWERUPS[foodType].color;
             this.spawnParticles(newHead.x, newHead.y, color, state.combo);
-            
+
             // Trigger Grid Ripple & Flashes
             if (CONFIG.VISUALS.enabled) {
                 state.ripples.push({
