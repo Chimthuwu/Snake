@@ -28,7 +28,7 @@ class Game {
         state.reset();
         
         if (state.gameMode === GameMode.LABYRINTH) {
-            state.walls = CONFIG.LEVELS['BOX']; // hardcoded for now
+            state.walls = CONFIG.LEVELS['TUNNELS'];
         } else {
             state.walls = [];
         }
