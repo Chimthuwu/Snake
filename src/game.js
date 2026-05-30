@@ -1,6 +1,6 @@
 import { CONFIG } from './config.js';
-import { state, GameState } from './state.js';
-import { InputManager } from './input.js';
+import { state, GameState } from './state';
+import { InputManager } from './input';
 import { Renderer } from './renderer.js';
 import { UIManager } from './ui.js';
 import { audio } from './audio.js';
@@ -237,7 +237,7 @@ class Game {
             break;
         }
 
-        this.input.nextDirection = chosenDir;
+        this.input.setDirection(chosenDir);
     }
 
     moveSnake() {
@@ -282,7 +282,7 @@ class Game {
         }
 
         // Self-collision
-        if (!isPhantom) {
+        if (state.activePowerup !== 'GHOST') {
             for (let s of this.snake) {
                 if (s.x === newHead.x && s.y === newHead.y) {
                     if (state.current === GameState.MENU) {

@@ -33,6 +33,7 @@ export class UIManager {
         
         this.btnDiff = document.getElementById('btn-diff');
         this.btnMute = document.getElementById('btn-mute-toggle');
+        this.btnMusic = document.getElementById('btn-music-toggle'); // Added
         this.btnPortfolio = document.getElementById('btn-portfolio-toggle');
         
         this.btnStart = document.getElementById('btn-start');
@@ -49,7 +50,7 @@ export class UIManager {
             btnMenu: this.btnMenu
         });
         
-        [this.btnStart, this.btnResume, this.btnQuit, this.btnRestart, this.btnMenu, this.btnDiff, this.btnMute, this.btnPortfolio].forEach(btn => {
+        [this.btnStart, this.btnResume, this.btnQuit, this.btnRestart, this.btnMenu, this.btnDiff, this.btnMute, this.btnMusic, this.btnPortfolio].forEach(btn => {
             if (btn) {
                 btn.style.setProperty('pointer-events', 'auto', 'important');
                 btn.style.setProperty('z-index', '1000', 'important');
@@ -113,6 +114,17 @@ export class UIManager {
             this.btnMute.classList.toggle('active', !state.isMuted);
             this.btnMute.textContent = state.isMuted ? '🔇' : '🔊';
             audio.resume();
+        });
+
+        this.btnMusic.addEventListener('click', () => {
+            audio.playUISelect();
+            if (audio.musicPlayer.paused) {
+                audio.playMusic();
+                this.btnMusic.classList.add('active');
+            } else {
+                audio.pauseMusic();
+                this.btnMusic.classList.remove('active');
+            }
         });
 
         // Difficulty Toggle
