@@ -36,9 +36,9 @@ class Game {
         }
 
         this.snake = [
-            { x: 10, y: 10 },
-            { x: 10, y: 11 },
-            { x: 10, y: 12 }
+            { x: 1, y: 1 },
+            { x: 1, y: 2 },
+            { x: 1, y: 3 }
         ];
         this.previousSnake = JSON.parse(JSON.stringify(this.snake));
         this.food = this.generateFood();
