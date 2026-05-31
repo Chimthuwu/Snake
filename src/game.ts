@@ -109,13 +109,20 @@ class Game {
             initialDirection = { x: 1, y: 0 }; // Default direction for fallback
         }
 
-        this.previousSnake = JSON.parse(JSON.stringify(this.snake));
+        this.previousSnake = this.snake.map(s => ({ ...s }));
         this.food = this.generateFood(); // Food generation already checks for walls and snake
         this.tickRate = CONFIG.DIFFICULTIES[state.difficulty].baseTick;
         this.input.reset();
         this.input.setDirection(initialDirection); // Set initial direction after spawn
         this.particles = [];
         this.ui.updateHUD();
+        }
+
+        loadRoom() {
+        if (state.gameMode !== GameMode.OPEN_WORLD) return;
+        const labyrinthLevels = Object.keys(CONFIG.LEVELS).filter(k => k !== 'EMPTY');
+        const randomLevelKey = labyrinthLevels[Math.floor(Math.random() * labyrinthLevels.length)];
+        state.walls = CONFIG.LEVELS[randomLevelKey];
         }
 
         generateFood() {
@@ -127,8 +134,17 @@ class Game {
                 y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
             };
             const onSnake = this.snake.some(s => s.x === newFood.x && s.y === newFood.y);
-            const onWall = state.walls.some(w => w.x === newFood.x && w.y === newFood.y);
-            valid = !onSnake && !onWall;
+            let onWall = state.walls.some(w => w.x === newFood.x && w.y === newFood.y);
+            if (!onWall && (state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD)) {
+                const isNearWall = state.walls.some(w => 
+                    Math.abs(newFood.x - w.x) <= 1 && Math.abs(newFood.y - w.y) <= 1
+                );
+                if (isNearWall) {
+                    onWall = true;
+                }
+            }
+            const onPortal = state.portal && state.portal.x === newFood.x && state.portal.y === newFood.y;
+            valid = !onSnake && !onWall && !onPortal;
         }
         // Determine type
         if (Math.random() < CONFIG.POWERUP_CHANCE) {
@@ -139,6 +155,26 @@ class Game {
         }
 
         return newFood;
+    }
+
+    generatePortal() {
+        if (state.gameMode !== GameMode.OPEN_WORLD) {
+            state.portal = null;
+            return;
+        }
+
+        let newPortal;
+        let valid = false;
+        while (!valid) {
+            newPortal = {
+                x: Math.floor(Math.random() * CONFIG.GRID_SIZE),
+                y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
+            };
+            const onSnake = this.snake.some(s => s.x === newPortal.x && s.y === newPortal.y);
+            const onWall = state.walls.some(w => w.x === newPortal.x && w.y === newPortal.y);
+            valid = !onSnake && !onWall;
+        }
+        state.portal = newPortal;
     }
 
     spawnParticles(x, y, color, combo = 1) {
@@ -196,7 +232,6 @@ class Game {
             state.activePowerup = null;
             state.powerupTimer = 0;
             if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_EAT * 2, CONFIG.SHAKE_DURATION_EAT * 2);
-            // TODO: play shield break sound
             return;
         }
 
@@ -354,7 +389,7 @@ class Game {
     }
 
     moveSnake() {
-        this.previousSnake = JSON.parse(JSON.stringify(this.snake));
+        this.previousSnake = this.snake.map(s => ({ ...s }));
         
         // Detect turn for camera impulse
         const oldDir = this.input.direction;
@@ -386,8 +421,26 @@ class Game {
             return;
         }
 
-        if (newHead.x < 0 || newHead.x >= CONFIG.GRID_SIZE || newHead.y < 0 || newHead.y >= CONFIG.GRID_SIZE) {
-            if (isPhantom) {
+        const hitBoundary = newHead.x < 0 || newHead.x >= CONFIG.GRID_SIZE || newHead.y < 0 || newHead.y >= CONFIG.GRID_SIZE;
+
+        if (hitBoundary) {
+            if (state.gameMode === GameMode.OPEN_WORLD) {
+                if (newHead.x < 0) {
+                    state.currentRoom.x--;
+                    newHead.x = CONFIG.GRID_SIZE - 1;
+                } else if (newHead.x >= CONFIG.GRID_SIZE) {
+                    state.currentRoom.x++;
+                    newHead.x = 0;
+                }
+                if (newHead.y < 0) {
+                    state.currentRoom.y--;
+                    newHead.y = CONFIG.GRID_SIZE - 1;
+                } else if (newHead.y >= CONFIG.GRID_SIZE) {
+                    state.currentRoom.y++;
+                    newHead.y = 0;
+                }
+                this.loadRoom();
+            } else if (isPhantom) {
                 newHead.x = (newHead.x + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
                 newHead.y = (newHead.y + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
             } else {
@@ -417,6 +470,14 @@ class Game {
         // Collisions handled above for Phantom/Ghost flexibility
         
         this.snake.unshift(newHead);
+
+        // Portal collision
+        if (state.gameMode === GameMode.OPEN_WORLD && state.portal && newHead.x === state.portal.x && newHead.y === state.portal.y) {
+            this.loadRoom();
+            this.food = this.generateFood();
+            this.generatePortal();
+            // Add score, effects, etc.
+        }
 
         // Food collision
         const ateFood = this.food && Math.abs(newHead.x - this.food.x) < 1 && Math.abs(newHead.y - this.food.y) < 1;

@@ -9,7 +9,8 @@ export enum GameState {
 
 export enum GameMode {
     CLASSIC = 'CLASSIC',
-    LABYRINTH = 'LABYRINTH'
+    LABYRINTH = 'LABYRINTH',
+    OPEN_WORLD = 'OPEN_WORLD'
 };
 
 interface Vec {
@@ -44,6 +45,8 @@ class StateManager {
     theme: string = CONFIG.defaultTheme;
     gameMode: GameMode = GameMode.CLASSIC;
     walls: {x: number, y: number}[] = [];
+    portal: {x: number, y: number} | null = null;
+    currentRoom: {x: number, y: number} = {x: 0, y: 0};
     
     ripples: Ripple[] = [];
     cameraImpulse: Vec = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -57,7 +60,11 @@ class StateManager {
         this.reset();
         this.highScore = parseInt(localStorage.getItem('neon_snake_highscore') || '0', 10);
         this.theme = localStorage.getItem('neon_snake_theme') || CONFIG.defaultTheme;
-        this.gameMode = (localStorage.getItem('neon_snake_gamemode') as GameMode) || GameMode.CLASSIC;
+        this.gameMode = GameMode.CLASSIC; // Default value
+        const storedGameMode = localStorage.getItem('neon_snake_gamemode');
+        if (storedGameMode && Object.values(GameMode).includes(storedGameMode as GameMode)) {
+            this.gameMode = storedGameMode as GameMode;
+        }
     }
 
     reset() {

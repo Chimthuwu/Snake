@@ -21,16 +21,16 @@ class AudioManager {
 
         // Music support
         this.musicTracks = [
-            '/music/AfternoonGlow.mp3',
-            '/music/InThisSafe.mp3',
-            '/music/LandOnYourNew.mp3',
-            '/music/LEDJuggling.mp3',
-            '/music/LilLamplight.mp3',
-            '/music/LowLowRumble.mp3',
-            '/music/MelancholicsAnonymous.mp3',
+            '/music/Afternoon%20Glow%20-%20Lyserge%20(ft%20Olga).mp3',
+            '/music/In%20this%20safe%20-%20serge%20rybak.mp3',
+            '/music/Land%20On%20Your%20NEW.mp3',
+            '/music/LED%20Juggling_(Doof)_19.mp3',
+            '/music/Lil%20lamplight.mp3',
+            '/music/Low%20Low%20Rumble.mp3',
+            '/music/Melancholics%20Anonymous%20-%20S3rge%20Rybak.mp3',
             '/music/Memowave.mp3',
-            '/music/ScrambledCircuitry.mp3',
-            '/music/ThePurge.mp3'
+            '/music/Scrambled%20Circuitry%20-%20Serg%20[FREE%20DL].mp3',
+            '/music/The%20Purge%20-%20Lyserge.mp3'
         ];
         this.currentTrackIndex = 0;
         this.musicPlayer = new Audio();

@@ -1,9 +1,10 @@
 import { state, GameState, GameMode } from './state';
 import { CONFIG } from './config';
 import { audio } from './audio';
+import { Game } from './game';
 
 export class UIManager {
-    game: any;
+    game: Game;
     menuScreen: HTMLElement;
     pauseScreen: HTMLElement;
     gameoverScreen: HTMLElement;
@@ -103,31 +104,26 @@ export class UIManager {
         this.menuButtons = [];
         
         if (this.btnStart) this.btnStart.addEventListener('click', () => {
-            console.log('btnStart clicked');
             audio.playUISelect();
             this.game.start();
         });
         
         if (this.btnResume) this.btnResume.addEventListener('click', () => {
-            console.log('btnResume clicked');
             audio.playUISelect();
             this.game.togglePause();
         });
         
         if (this.btnQuit) this.btnQuit.addEventListener('click', () => {
-            console.log('btnQuit clicked');
             audio.playUISelect();
             this.game.quitToMenu();
         });
 
         if (this.btnRestart) this.btnRestart.addEventListener('click', () => {
-            console.log('btnRestart clicked');
             audio.playUISelect();
             this.game.start();
         });
 
         if (this.btnMenu) this.btnMenu.addEventListener('click', () => {
-            console.log('btnMenu clicked');
             audio.playUISelect();
             this.game.quitToMenu();
         });
@@ -284,7 +280,6 @@ export class UIManager {
                 break;
             case GameState.GAMEOVER:
                 this.menuButtons = [this.btnRestart, this.btnMenu, this.btnPortfolio, this.btnMute].filter(b => b);
-                console.log('GAMEOVER menu buttons:', this.menuButtons);
                 break;
             default:
                 this.menuButtons = [];

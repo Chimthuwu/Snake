@@ -1,5 +1,5 @@
 import { CONFIG } from './config.js';
-import { state } from './state.js';
+import { state, GameMode } from './state.js';
 
 export class Renderer {
     constructor(canvas) {
@@ -98,9 +98,10 @@ export class Renderer {
 
     drawWalls(ctx, cellSize, colors) {
         if (state.walls.length === 0) return;
-        ctx.fillStyle = colors.snakeHead;
+        const isLethal = state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD;
+        ctx.fillStyle = isLethal ? colors.wall : colors.snakeHead;
         ctx.shadowBlur = 20;
-        ctx.shadowColor = colors.snakeHead;
+        ctx.shadowColor = isLethal ? colors.wall : colors.snakeHead;
         state.walls.forEach(wall => {
             ctx.beginPath();
             ctx.rect(wall.x * cellSize, wall.y * cellSize, cellSize, cellSize);
@@ -155,6 +156,31 @@ export class Renderer {
             ctx.arc(centerX, centerY, radius * 2.5, 0, Math.PI * 2);
             ctx.fill();
 
+            ctx.restore();
+        }
+
+        if (state.portal) {
+            const p = state.portal;
+            const portalColor = '#9400D3'; // Deep violet
+            const pulse = 1.0 + Math.sin(Date.now() / 100) * 0.3;
+            
+            ctx.save();
+            ctx.shadowBlur = 60;
+            ctx.shadowColor = portalColor;
+            
+            const centerX = p.x * cellSize + cellSize / 2;
+            const centerY = p.y * cellSize + cellSize / 2;
+            const radius = (cellSize / 2) * pulse;
+
+            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            grad.addColorStop(0, '#fff');
+            grad.addColorStop(0.3, portalColor);
+            grad.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
             ctx.restore();
         }
 

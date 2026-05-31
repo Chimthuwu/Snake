@@ -55,6 +55,7 @@ interface ColorScheme {
     snakeBody: string;
     snakeGhost: string;
     food: string;
+    wall: string;
     particles: string[];
 }
 
@@ -105,7 +106,7 @@ export const CONFIG: Config = {
     // Visuals & Depth System
     VISUALS: {
         enabled: true,
-        VISUAL_DEBUG: true, // Force exaggerated effects
+        VISUAL_DEBUG: false, // Force exaggerated effects
         // Depth & Camera
         boardTiltMax: 5, // degrees
         boardTiltSpring: 0.1,
@@ -166,6 +167,7 @@ export const CONFIG: Config = {
             snakeBody: 'hsla(180, 100%, 50%, 0.8)',
             snakeGhost: 'hsla(280, 100%, 60%, 0.6)',
             food: 'hsl(330, 100%, 50%)',
+            wall: 'hsl(0, 80%, 50%)',
             particles: ['hsl(180, 100%, 50%)', 'hsl(330, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(280, 100%, 60%)']
         },
         EMBER: {
@@ -175,6 +177,7 @@ export const CONFIG: Config = {
             snakeBody: 'hsla(30, 100%, 50%, 0.8)',
             snakeGhost: 'hsla(300, 100%, 60%, 0.6)',
             food: 'hsl(150, 100%, 50%)',
+            wall: 'hsl(0, 80%, 50%)',
             particles: ['hsl(45, 100%, 50%)', 'hsl(30, 100%, 50%)', 'hsl(10, 100%, 50%)']
         },
         OCEAN: {
@@ -184,6 +187,7 @@ export const CONFIG: Config = {
             snakeBody: 'hsla(210, 100%, 60%, 0.8)',
             snakeGhost: 'hsla(250, 100%, 70%, 0.6)',
             food: 'hsl(100, 100%, 50%)',
+            wall: 'hsl(0, 80%, 50%)',
             particles: ['hsl(190, 100%, 60%)', 'hsl(210, 100%, 60%)', 'hsl(100, 100%, 50%)']
         }
     },
