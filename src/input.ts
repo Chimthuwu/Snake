@@ -5,6 +5,8 @@ interface Direction {
     y: number;
 }
 
+const GAME_KEYS = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyA','KeyS','KeyD','Space','KeyP']);
+
 export class InputManager {
     direction: Direction;
     inputQueue: Direction[];
@@ -13,6 +15,12 @@ export class InputManager {
     
     touchStartX: number;
     touchStartY: number;
+    
+    // Mobile touch D-Pad
+    dpadUp: HTMLElement | null;
+    dpadDown: HTMLElement | null;
+    dpadLeft: HTMLElement | null;
+    dpadRight: HTMLElement | null;
     
     constructor() {
         this.direction = { x: 0, y: -1 };
@@ -24,33 +32,71 @@ export class InputManager {
         this.touchStartX = 0;
         this.touchStartY = 0;
         
+        // D-Pad references
+        this.dpadUp = document.getElementById('dpad-up');
+        this.dpadDown = document.getElementById('dpad-down');
+        this.dpadLeft = document.getElementById('dpad-left');
+        this.dpadRight = document.getElementById('dpad-right');
+        
         this.bindEvents();
     }
 
     bindEvents(): void {
+        // Keyboard - use capture phase + preventDefault to beat browser scrolling
         window.addEventListener('keydown', (e: KeyboardEvent) => {
+            if (GAME_KEYS.has(e.code)) {
+                e.preventDefault();
+            }
             this.keys[e.code] = true;
             this.handleInput(e.code);
-        });
+        }, { passive: false });
 
         window.addEventListener('keyup', (e: KeyboardEvent) => {
+            if (GAME_KEYS.has(e.code)) {
+                e.preventDefault();
+            }
             this.keys[e.code] = false;
-        });
+        }, { passive: false });
 
-        // Touch events for mobile
+        // Touch events for swipe (passive: false so we can preventDefault)
         const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
         if (canvas) {
             canvas.addEventListener('touchstart', (e: TouchEvent) => {
+                e.preventDefault();
                 this.touchStartX = e.changedTouches[0].screenX;
                 this.touchStartY = e.changedTouches[0].screenY;
-            }, { passive: true });
+            }, { passive: false });
 
             canvas.addEventListener('touchend', (e: TouchEvent) => {
+                e.preventDefault();
                 const touchEndX = e.changedTouches[0].screenX;
                 const touchEndY = e.changedTouches[0].screenY;
                 this.handleSwipe(this.touchStartX, this.touchStartY, touchEndX, touchEndY);
-            }, { passive: true });
+            }, { passive: false });
         }
+
+        // D-Pad button events for mobile
+        const dpadAction = (code: string) => {
+            this.handleInput(code);
+        };
+        
+        const bindDpad = (btn: HTMLElement | null, code: string) => {
+            if (!btn) return;
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dpadAction(code);
+            }, { passive: false });
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                dpadAction(code);
+            });
+        };
+        
+        bindDpad(this.dpadUp, 'ArrowUp');
+        bindDpad(this.dpadDown, 'ArrowDown');
+        bindDpad(this.dpadLeft, 'ArrowLeft');
+        bindDpad(this.dpadRight, 'ArrowRight');
     }
 
     handleInput(code: string): void {

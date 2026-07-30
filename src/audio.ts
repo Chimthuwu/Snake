@@ -8,7 +8,8 @@ class AudioManager {
     musicPlayer: HTMLAudioElement;
     analyser: AnalyserNode | null;
     source: MediaElementAudioSourceNode | null;
-    frequencyData: Uint8Array | null;
+    frequencyData: (Uint8Array<ArrayBuffer>) | null;
+    isMusicPlaying: boolean;
 
     constructor() {
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -18,37 +19,57 @@ class AudioManager {
         this.analyser = null;
         this.source = null;
         this.frequencyData = null;
+        this.isMusicPlaying = false;
 
-        // Music support
+        // Music tracks (cleaned filenames)
         this.musicTracks = [
-            '/music/Afternoon%20Glow%20-%20Lyserge%20(ft%20Olga).mp3',
-            '/music/In%20this%20safe%20-%20serge%20rybak.mp3',
-            '/music/Land%20On%20Your%20NEW.mp3',
-            '/music/LED%20Juggling_(Doof)_19.mp3',
-            '/music/Lil%20lamplight.mp3',
-            '/music/Low%20Low%20Rumble.mp3',
-            '/music/Melancholics%20Anonymous%20-%20S3rge%20Rybak.mp3',
-            '/music/Memowave.mp3',
-            '/music/Scrambled%20Circuitry%20-%20Serg%20[FREE%20DL].mp3',
-            '/music/The%20Purge%20-%20Lyserge.mp3'
+            '/music/track01.mp3',
+            '/music/track02.mp3',
+            '/music/track03.mp3',
+            '/music/track04.mp3',
+            '/music/track05.mp3',
+            '/music/track06.mp3',
+            '/music/track07.mp3',
+            '/music/track08.mp3',
+            '/music/track09.mp3',
+            '/music/track10.mp3'
         ];
         this.currentTrackIndex = 0;
         this.musicPlayer = new Audio();
         this.musicPlayer.crossOrigin = "anonymous";
         this.musicPlayer.loop = false;
-        this.musicPlayer.onended = () => this.nextTrack();
-        this.musicPlayer.volume = 0.2;
+        this.musicPlayer.volume = 0.25;
+
+        // Auto-advance to next track
+        this.musicPlayer.addEventListener('ended', () => this.nextTrack());
+
+        // Handle load errors gracefully
+        this.musicPlayer.addEventListener('error', () => {
+            console.warn('Audio: failed to load track, skipping...');
+            this.nextTrack();
+        });
+    }
+
+    async ensureContextReady(): Promise<void> {
+        if (this.ctx.state === 'suspended') {
+            await this.ctx.resume();
+        }
     }
 
     setupAnalyser() {
-        if (this.source) return;
-        this.source = this.ctx.createMediaElementSource(this.musicPlayer);
-        this.analyser = this.ctx.createAnalyser();
-        this.analyser.fftSize = 256;
-        const bufferLength = this.analyser.frequencyBinCount;
-        this.frequencyData = new Uint8Array(bufferLength);
-        this.source.connect(this.analyser);
-        this.analyser.connect(this.masterGain);
+        if (this.source) return; // Can only create MediaElementSource once
+        try {
+            this.source = this.ctx.createMediaElementSource(this.musicPlayer);
+            this.analyser = this.ctx.createAnalyser();
+            this.analyser.fftSize = 256;
+            this.analyser.smoothingTimeConstant = 0.8;
+            const bufferLength = this.analyser.frequencyBinCount;
+            this.frequencyData = new Uint8Array(bufferLength);
+            this.source.connect(this.analyser);
+            this.analyser.connect(this.masterGain);
+        } catch (e) {
+            console.warn('Audio: analyser setup failed, music-reactive effects disabled', e);
+        }
     }
 
     getAudioData(): Uint8Array | null {
@@ -59,28 +80,43 @@ class AudioManager {
         return null;
     }
 
-    playMusic(): void {
+    async playMusic(): Promise<void> {
         if (state.isMuted) return;
+        await this.ensureContextReady();
         this.setupAnalyser();
         this.musicPlayer.src = this.musicTracks[this.currentTrackIndex];
-        this.musicPlayer.play().catch(e => console.log('Music play blocked', e));
+        try {
+            await this.musicPlayer.play();
+            this.isMusicPlaying = true;
+        } catch (e) {
+            console.log('Audio: play blocked (user interaction may be needed)', e);
+        }
     }
 
     pauseMusic(): void {
         this.musicPlayer.pause();
+        this.isMusicPlaying = false;
+    }
+
+    async toggleMusic(): Promise<void> {
+        if (this.isMusicPlaying) {
+            this.pauseMusic();
+        } else {
+            await this.playMusic();
+        }
     }
 
     nextTrack(): void {
         this.currentTrackIndex = (this.currentTrackIndex + 1) % this.musicTracks.length;
-        this.playMusic();
+        this.isMusicPlaying = false;
+        // Small delay before next track to avoid rapid-fire errors
+        setTimeout(() => this.playMusic(), 300);
     }
 
-    resume(): void {
-        if (this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
-        if (this.musicPlayer.paused) {
-            this.musicPlayer.play().catch(e => console.log('Autoplay blocked', e));
+    async resume(): Promise<void> {
+        await this.ensureContextReady();
+        if (!this.isMusicPlaying && !state.isMuted) {
+            this.playMusic();
         }
     }
 
@@ -102,7 +138,6 @@ class AudioManager {
         osc.start();
         osc.stop(this.ctx.currentTime + duration);
     }
-// ... existing code ...
 
     playMove() {
         this.playTone(150, 'sine', 0.1, 0.1);
@@ -123,17 +158,17 @@ class AudioManager {
     playDie() {
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        
+
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(200, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 1);
-        
+
         gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1);
-        
+
         osc.connect(gain);
         gain.connect(this.masterGain);
-        
+
         osc.start();
         osc.stop(this.ctx.currentTime + 1);
     }

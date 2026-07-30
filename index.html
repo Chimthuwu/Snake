@@ -11,6 +11,9 @@
 </head>
 <body>
     <div id="app">
+        <!-- Synthwave Background Element -->
+        <div id="synthwave-sun"></div>
+
         <!-- CRT Scanline Effect & Vignette -->
         <div id="vignette-overlay"></div>
         
@@ -30,7 +33,7 @@
 
                         <div class="combo-box glass-panel" id="combo-container">
                             <span class="label">COMBO</span>
-                            <span id="combo-val" class="value combo-pop">x1</span>
+                            <span id="combo-val" class="value">x1</span>
                             <div class="combo-bar-container">
                                 <div id="combo-bar-fill"></div>
                             </div>
@@ -71,8 +74,7 @@
                         
                         <div class="controls-hint">
                             <p>[WASD] or [ARROWS] to move</p>
-                            <p>[SPACE] to pause</p>
-                            <p>[P] toggle portfolio mode</p>
+                            <p>[SPACE] to pause &bull; [P] portfolio mode</p>
                         </div>
                     </div>
                 </div>
@@ -117,11 +119,19 @@
 
             </div>
         </div>
+
+        <!-- Mobile D-Pad -->
+        <div id="dpad-container">
+            <button id="dpad-up" class="dpad-btn" title="Up">▲</button>
+            <button id="dpad-down" class="dpad-btn" title="Down">▼</button>
+            <button id="dpad-left" class="dpad-btn" title="Left">◀</button>
+            <button id="dpad-right" class="dpad-btn" title="Right">▶</button>
+        </div>
         
         <!-- Global Controls -->
-        <button id="btn-portfolio-toggle" class="icon-btn hardware-toggle" title="Toggle Portfolio Mode">⚙️</button>
-        <button id="btn-music-toggle" class="icon-btn hardware-toggle" title="Toggle Music">🎵</button>
-        <button id="btn-mute-toggle" class="icon-btn hardware-toggle" title="Toggle Audio">🔊</button>
+        <button id="btn-portfolio-toggle" class="hardware-toggle" title="Toggle Portfolio Mode">⚙️</button>
+        <button id="btn-music-toggle" class="hardware-toggle" title="Toggle Music">🎵</button>
+        <button id="btn-mute-toggle" class="hardware-toggle" title="Toggle Audio">🔊</button>
     </div>
 
     <script type="module" src="/src/game.js"></script>
