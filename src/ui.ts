@@ -140,6 +140,8 @@ export class UIManager {
             state.isMuted = !state.isMuted;
             this.btnMute.classList.toggle('active', !state.isMuted);
             this.btnMute.textContent = state.isMuted ? '🔇' : '🔊';
+            // Make the music element actually silent — synth SFX are gated by state.isMuted separately.
+            audio.setMuted(state.isMuted);
             audio.resume();
         });
 

@@ -139,11 +139,17 @@ class AudioManager {
         setTimeout(() => this.playMusic(), 300);
     }
 
-    async resume(): Promise<void> {
+    async    resume(): Promise<void> {
         await this.ensureContextReady();
-        if (!this.isMusicPlaying && !state.isMuted && this.musicPlayer.paused) {
-            this.playMusic();
+        if (!this.isMusicPlaying && !this.musicPlayer.paused) {
+            this.musicPlayer.play().catch(() => {});
+            this.isMusicPlaying = true;
         }
+    }
+
+    /** Toggle the musicPlayer volume without affecting synth SFX (state.isMuted). */
+    setMuted(muted: boolean): void {
+        this.musicPlayer.volume = muted ? 0 : 0.7;
     }
 
     playTone(freq: number, type: OscillatorType, duration: number, vol: number = 1): void {

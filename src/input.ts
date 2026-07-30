@@ -42,21 +42,18 @@ export class InputManager {
     }
 
     bindEvents(): void {
-        // Keyboard - use capture phase + preventDefault to beat browser scrolling
+        // Keyboard: passive:true so the browser delivers events without waiting on our handler
+        // — every microsecond of latency matters in a real-time game. The body is overflow:hidden
+        // on every page that mounts the canvas, so arrow keys / Space won't scroll the page even
+        // without e.preventDefault().
         window.addEventListener('keydown', (e: KeyboardEvent) => {
-            if (GAME_KEYS.has(e.code)) {
-                e.preventDefault();
-            }
             this.keys[e.code] = true;
             this.handleInput(e.code);
-        }, { passive: false });
+        }, { passive: true });
 
         window.addEventListener('keyup', (e: KeyboardEvent) => {
-            if (GAME_KEYS.has(e.code)) {
-                e.preventDefault();
-            }
             this.keys[e.code] = false;
-        }, { passive: false });
+        }, { passive: true });
 
         // Touch events for swipe (passive: false so we can preventDefault)
         const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;

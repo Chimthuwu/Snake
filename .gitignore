@@ -7,5 +7,6 @@ coverage/
 .env*
 !.env.example
 
-# Local high-bitrate originals (kept on disk only for A/B quality check; do not push to repo)
-public/music/_backup_originals/
+# Local A/B backup folders (kept on disk only for quality check)
+# Match anywhere in the tree — covers public/music/_backup_originals and any future copies.
+_backup_originals/
