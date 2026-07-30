@@ -99,89 +99,60 @@ export class Renderer {
     drawWalls(ctx, cellSize, colors) {
         if (state.walls.length === 0) return;
         const time = Date.now();
-        // Vaporwave: slower breath, smoother pulses. No harsh circuit scan lines.
-        const pulse = 1.0 + Math.sin(time / 380) * 0.18;
-        const rotationRing = (time / 1200) % (Math.PI * 2);
+        const tempo = 1.0 + Math.max(0, state.gridBrightness - 1) * 0.6 + (state.levelUpFlash > 0 ? 0.8 : 0);
 
         const isLethal = state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD;
-        // Vaporwave pastel palette:
-        //   locked (lethal)  -> hot pink core + soft purple halo ("danger pastel")
-        //   unlocked (door)  -> cyan core + mint halo ("allowed passage")
-        const defaultCore = isLethal ? '#ff71ce' : '#01cdfe';
-        const defaultRim  = isLethal ? '#b967ff' : '#05ffa1';
 
         state.walls.forEach(wall => {
-            // Unlocked Labyrinth doors flip to the "passage" palette so they're visually
-            // unambiguous about being safe to enter.
             const isUnlocked = state.unlockedWalls && state.unlockedWalls.some(w => w.x === wall.x && w.y === wall.y);
-            const wallCore = isUnlocked ? '#01cdfe' : defaultCore;
-            const wallRim  = isUnlocked ? '#05ffa1' : defaultRim;
-
             const cx = wall.x * cellSize;
             const cy = wall.y * cellSize;
-            const pad = Math.max(2, cellSize * 0.18);
-            const cxMid = cx + cellSize / 2;
-            const cyMid = cy + cellSize / 2;
+            const sz = cellSize;
 
-            // 1) Soft pastel halo (lighter + slower mod than the old neon-circuit version)
-            ctx.save();
-            ctx.shadowBlur = cellSize * 1.0 * pulse;
-            ctx.shadowColor = wallRim;
-            ctx.fillStyle = wallRim;
-            ctx.globalAlpha = isUnlocked ? 0.55 : 0.35;
-            ctx.fillRect(cx, cy, cellSize, cellSize);
-            ctx.restore();
+            // Per-cell phase offset drives the "evolving" gradient — neighboring walls
+            // blaze through the synthwave palette slightly out of sync, producing a slow
+            // color wave that crawls across the maze.
+            const cellPhase = (wall.x * 0.13 + wall.y * 0.09) % 1;
+            const animOffset = (((time / 1100) * tempo + cellPhase) % 1 + 1) % 1;
 
-            // 2) Smooth radial gradient — white-hot center fading through pastel core
-            //    into transparent edges (a circle within the cell, not a hard square).
-            ctx.save();
-            const grad = ctx.createRadialGradient(cxMid, cyMid, 0, cxMid, cyMid, cellSize * 0.5);
-            grad.addColorStop(0, '#ffffff');
-            grad.addColorStop(0.3, wallCore);
-            grad.addColorStop(0.75, wallRim);
-            grad.addColorStop(1, 'transparent');
-            ctx.fillStyle = grad;
-            ctx.globalAlpha = 0.85;
-            ctx.beginPath();
-            ctx.arc(cxMid, cyMid, cellSize * 0.42, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-
-            // 3) Subtle white inner ring (gentle halo line, no harsh brackets)
-            ctx.save();
-            ctx.strokeStyle = '#ffffff';
-            ctx.globalAlpha = isUnlocked ? 0.9 : 0.35;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(cxMid, cyMid, cellSize * 0.42, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-
-            // 4) UNLOCKED DOOR: smooth rotating arc ring (mint, slower than neon)
+            // Diagonal linear gradient — the entire cell fills with the gradient. No
+            // circles, no inner shapes, no per-wall decorations inside the rectangle.
+            const grad = ctx.createLinearGradient(cx, cy, cx + sz, cy + sz);
             if (isUnlocked) {
-                ctx.save();
-                ctx.strokeStyle = '#ffffff';
-                ctx.globalAlpha = 0.75;
-                ctx.lineWidth = 1.5;
-                for (let i = 0; i < 6; i++) {
-                    const a = rotationRing + (i / 6) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.arc(cxMid, cyMid, cellSize * 0.55, a, a + Math.PI / 8);
-                    ctx.stroke();
-                }
-                ctx.restore();
+                // Cyan-mint: clearly "passage / safe to enter"
+                grad.addColorStop((animOffset - 0.35 + 1) % 1, '#05ffa1');
+                grad.addColorStop(animOffset, '#01cdfe');
+                grad.addColorStop((animOffset + 0.35) % 1, '#ffffff');
+            } else if (isLethal) {
+                // Synthwave hot palette: deep purple -> hot pink -> cyan, the classic
+                // "danger" gradient evolving through the maze.
+                grad.addColorStop((animOffset - 0.35 + 1) % 1, '#3a0ca3');
+                grad.addColorStop(animOffset, '#ff006e');
+                grad.addColorStop((animOffset + 0.35) % 1, '#3a86ff');
+            } else {
+                // Non-lethal OPEN_WORLD walls: cyan -> mint -> soft cyan.
+                grad.addColorStop((animOffset - 0.35 + 1) % 1, '#01cdfe');
+                grad.addColorStop(animOffset, '#05ffa1');
+                grad.addColorStop((animOffset + 0.35) % 1, '#90e0ef');
             }
+
+            // Single rectangular fill (no inner objects).
+            ctx.fillStyle = grad;
+            ctx.fillRect(cx, cy, sz, sz);
+
+            // Subtle white top-edge highlight: maintains the "box" silhouette for
+            // legibility (still a thin rect, never a circle or arc).
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.20)';
+            ctx.fillRect(cx, cy, sz, Math.max(1, sz * 0.07));
         });
 
-        // Level-up flash overlay tint (restrained pastel wash, not hot pink)
+        // Level-up flash overlay tint (still rectangular — no circles).
         if (state.levelUpFlash > 0) {
             ctx.save();
-            ctx.globalAlpha = Math.min(0.40, state.levelUpFlash * 0.45);
-            ctx.fillStyle = '#ff71ce';
+            ctx.globalAlpha = Math.min(0.35, state.levelUpFlash * 0.45);
+            ctx.fillStyle = '#ff006e';
             for (const w of state.walls) {
-                ctx.beginPath();
-                ctx.arc(w.x * cellSize + cellSize / 2, w.y * cellSize + cellSize / 2, cellSize * 0.45, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize, cellSize);
             }
             ctx.restore();
         }
