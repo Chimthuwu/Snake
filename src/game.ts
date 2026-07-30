@@ -27,10 +27,15 @@ class Game {
     resetGameData() {
         state.reset();
         
+        // Labyrinth mode (walls-as-doors): the room has 4 perimeter doors, all locked.
         if (state.gameMode === GameMode.LABYRINTH) {
-            const labyrinthLevels = Object.keys(CONFIG.LEVELS).filter(k => k !== 'EMPTY');
-            const randomLevelKey = labyrinthLevels[Math.floor(Math.random() * labyrinthLevels.length)];
-            state.walls = CONFIG.LEVELS[randomLevelKey];
+            const halfGrid = Math.floor(CONFIG.GRID_SIZE / 2);
+            state.walls = [
+                { x: halfGrid, y: 0 },                     // top door
+                { x: halfGrid, y: CONFIG.GRID_SIZE - 1 },  // bottom door
+                { x: 0, y: halfGrid },                     // left door
+                { x: CONFIG.GRID_SIZE - 1, y: halfGrid },  // right door
+            ];
         } else {
             state.walls = [];
         }
@@ -80,6 +85,9 @@ class Game {
                 });
             }
 
+            // Note: in Labyrinth mode the 4 doors are placed at mid-perimeter, which is never
+            // on top of a corner spawn. So no per-iteration wall regen is required here.
+
             // Check if potential snake overlaps with walls or boundaries
             validSpawn = true;
             for (let segment of tempSnake) {
@@ -104,9 +112,10 @@ class Game {
         }
 
         if (!validSpawn) {
-            // Fallback: if no safe spawn found after maxAttempts, use a default safe spawn
+            // Fallback: if no safe spawn found after maxAttempts. With walls-as-doors the
+            // 4 perimeter doors are fixed; the (1,1)–(1,3) head lands safely in the interior.
             this.snake = [{x: 1, y: 1}, {x: 1, y: 2}, {x: 1, y: 3}];
-            initialDirection = { x: 1, y: 0 }; // Default direction for fallback
+            initialDirection = { x: 1, y: 0 };
         }
 
         this.previousSnake = this.snake.map(s => ({ ...s }));
@@ -136,10 +145,20 @@ class Game {
             const onSnake = this.snake.some(s => s.x === newFood.x && s.y === newFood.y);
             let onWall = state.walls.some(w => w.x === newFood.x && w.y === newFood.y);
             if (!onWall && (state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD)) {
-                const isNearWall = state.walls.some(w => 
+                const isNearWall = state.walls.some(w =>
                     Math.abs(newFood.x - w.x) <= 1 && Math.abs(newFood.y - w.y) <= 1
                 );
                 if (isNearWall) {
+                    onWall = true;
+                }
+            }
+            // In Labyrinth mode the entire perimeter is touch-of-death (lethal). Food must
+            // land in the interior only so the player can physically reach it.
+            if (state.gameMode === GameMode.LABYRINTH) {
+                const grid = CONFIG.GRID_SIZE;
+                const onPerimeter = newFood.x === 0 || newFood.x === grid - 1
+                                 || newFood.y === 0 || newFood.y === grid - 1;
+                if (onPerimeter) {
                     onWall = true;
                 }
             }
@@ -158,23 +177,114 @@ class Game {
     }
 
     generatePortal() {
+        // Portals are an OPEN_WORLD-only feature. Labyrinth now uses walls-as-doors
+        // (the 4 perimeter doors unlock by collecting food).
         if (state.gameMode !== GameMode.OPEN_WORLD) {
             state.portal = null;
             return;
         }
 
-        let newPortal;
-        let valid = false;
-        while (!valid) {
-            newPortal = {
-                x: Math.floor(Math.random() * CONFIG.GRID_SIZE),
-                y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
+        const r = () => Math.random();
+        let found = null;
+        const tries = 300;
+        for (let i = 0; i < tries && !found; i++) {
+            const candidate = {
+                x: Math.floor(r() * CONFIG.GRID_SIZE),
+                y: Math.floor(r() * CONFIG.GRID_SIZE)
             };
-            const onSnake = this.snake.some(s => s.x === newPortal.x && s.y === newPortal.y);
-            const onWall = state.walls.some(w => w.x === newPortal.x && w.y === newPortal.y);
-            valid = !onSnake && !onWall;
+            const onSnake = this.snake.some(s => s.x === candidate.x && s.y === candidate.y);
+            const onWall = state.walls.some(w => w.x === candidate.x && w.y === candidate.y);
+            // Avoid placing portal on the same cell as the existing food — confusing visual.
+            const onFood = !!this.food && this.food.x === candidate.x && this.food.y === candidate.y;
+            if (!onSnake && !onWall && !onFood) {
+                found = candidate;
+            }
         }
-        state.portal = newPortal;
+        state.portal = found;
+    }
+
+    /** Walls-as-doors: snake crossed an unlocked door into a new room.
+     *  Spawn the snake 1 cell INSIDE the door they crossed and face the direction
+     *  AWAY from that door — otherwise the snake's preserved momentum marches it
+     *  straight into the opposite locked door of the new room (death in ~9 ticks). */
+    enterNewRoom(doorCoord: {x: number, y: number}) {
+        const grid = CONFIG.GRID_SIZE;
+        const halfGrid = Math.floor(grid / 2);
+
+        state.roomsEntered++;
+        state.foodEatenThisRoom = 0;
+        state.unlockedWalls = [];
+
+        // Map-coordinate update + spawn position + facing direction based on the door crossed
+        let spawnX = halfGrid;
+        let spawnY = halfGrid;
+        let moveX = 0;
+        let moveY = 0;
+        if (doorCoord.y === 0) {
+            // Top door crossed → enter room facing down (+y)
+            state.currentRoom.y--;
+            spawnY = 1;
+            moveY = 1;
+        } else if (doorCoord.y === grid - 1) {
+            // Bottom door crossed → enter room facing up (-y)
+            state.currentRoom.y++;
+            spawnY = grid - 2;
+            moveY = -1;
+        } else if (doorCoord.x === 0) {
+            // Left door crossed → enter room facing right (+x)
+            state.currentRoom.x--;
+            spawnX = 1;
+            moveX = 1;
+        } else if (doorCoord.x === grid - 1) {
+            // Right door crossed → enter room facing left (-x)
+            state.currentRoom.x++;
+            spawnX = grid - 2;
+            moveX = -1;
+        }
+
+        // Defensive: if for any reason moveX/moveY both ended up 0 (doorCoord didn't match
+        // the 4 known walls, e.g. an older version of the helper), default to facing rightward.
+        if (moveX === 0 && moveY === 0) moveX = 1;
+        this.input.setDirection({ x: moveX, y: moveY });
+
+        // Reset walls to the 4 doors of the new room (all locked again)
+        state.walls = [
+            { x: halfGrid, y: 0 },
+            { x: halfGrid, y: grid - 1 },
+            { x: 0, y: halfGrid },
+            { x: grid - 1, y: halfGrid },
+        ];
+
+        // Cycle theme for visual progression feedback
+        const newTheme = state.cycleTheme();
+        const tColor = CONFIG.THEMES[newTheme].food;
+
+        // Stack all snake segments at the spawn cell. Next tick: head moves into
+        // (spawnX+moveX, spawnY+moveY) which is interior, so no self-collision.
+        for (let i = 0; i < this.snake.length; i++) {
+            this.snake[i] = { x: spawnX, y: spawnY };
+        }
+        this.previousSnake = this.snake.map(s => ({ ...s }));
+        state.snakeLength = this.snake.length;
+
+        // Update depth LAST so UI/telemetry see consistent state
+        state.labyrinthDepth = state.roomsEntered - 1;
+
+        // Visual celebration
+        state.levelUpFlash = 1.0;
+        state.gridBrightness = Math.max(state.gridBrightness, 2.5);
+        state.chromaticGlitch = 1.4;
+
+        // Burst particles in the new theme color
+        for (let i = 0; i < 35; i++) {
+            this.spawnParticles(spawnX, spawnY, tColor, 5);
+        }
+
+        // Fresh food for the new room
+        this.food = this.generateFood();
+
+        // Audio: powerup jingle
+        audio.playPowerup();
     }
 
     spawnParticles(x, y, color, combo = 1) {
@@ -319,6 +429,7 @@ class Game {
         if (state.globalFlash > 0) state.globalFlash -= dt / 500;
         if (state.gridBrightness > 1.0) state.gridBrightness -= dt / 200; // Faster decay
         if (state.chromaticGlitch > 0) state.chromaticGlitch -= dt / 200;
+        // (state.levelUpFlash decays in loop() so it keeps ticking during pause/gameover)
 
         // Audio-reactive effects
         const audioData = audio.getAudioData();
@@ -412,11 +523,23 @@ class Game {
             y: head.y + dir.y
         };
 
-        const isPhantom = state.difficulty === 'PHANTOM' || state.activePowerup === 'GHOST';
+        // Phantom vs Ghost split:
+        //  - PHANTOM difficulty  -> only wraps the 4 boundary edges (out-of-bounds snap to opposite side).
+        //  - GHOST powerup        -> additionally phases through in-level walls.
+        //  - Otherwise            -> walls (and boundaries) are lethal.
+        const wrapsBorders = state.difficulty === 'PHANTOM' || state.activePowerup === 'GHOST';
+        const phasesWalls  = state.activePowerup === 'GHOST';
         
         // Wall collision
         const hitWall = state.walls.some(w => w.x === newHead.x && w.y === newHead.y);
-        if (hitWall && !isPhantom) {
+        if (hitWall && !phasesWalls) {
+            // Labyrinth walls-as-doors: if the head enters an unlocked door cell, transition
+            // rooms instead of dying.
+            if (state.gameMode === GameMode.LABYRINTH
+                && state.unlockedWalls.some(w => w.x === newHead.x && w.y === newHead.y)) {
+                this.enterNewRoom(newHead);
+                return;
+            }
             this.gameOver();
             return;
         }
@@ -424,7 +547,13 @@ class Game {
         const hitBoundary = newHead.x < 0 || newHead.x >= CONFIG.GRID_SIZE || newHead.y < 0 || newHead.y >= CONFIG.GRID_SIZE;
 
         if (hitBoundary) {
-            if (state.gameMode === GameMode.OPEN_WORLD) {
+            if (state.gameMode === GameMode.LABYRINTH) {
+                // The 4 doors are placed at mid-perimeter, so any *boundary* hit in Labyrinth
+                // mode is a non-door perimeter cell — unconditionally lethal. PHANTOM doesn't
+                // bypass because the entire perimeter is touch-of-death.
+                this.gameOver();
+                return;
+            } else if (state.gameMode === GameMode.OPEN_WORLD) {
                 if (newHead.x < 0) {
                     state.currentRoom.x--;
                     newHead.x = CONFIG.GRID_SIZE - 1;
@@ -440,7 +569,7 @@ class Game {
                     newHead.y = 0;
                 }
                 this.loadRoom();
-            } else if (isPhantom) {
+            } else if (wrapsBorders) {
                 newHead.x = (newHead.x + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
                 newHead.y = (newHead.y + CONFIG.GRID_SIZE) % CONFIG.GRID_SIZE;
             } else {
@@ -471,12 +600,13 @@ class Game {
         
         this.snake.unshift(newHead);
 
-        // Portal collision
-        if (state.gameMode === GameMode.OPEN_WORLD && state.portal && newHead.x === state.portal.x && newHead.y === state.portal.y) {
+        // Portal collision (OPEN_WORLD only — Labyrinth uses door transitions)
+        if (state.portal && state.gameMode === GameMode.OPEN_WORLD
+            && newHead.x === state.portal.x && newHead.y === state.portal.y) {
             this.loadRoom();
             this.food = this.generateFood();
             this.generatePortal();
-            // Add score, effects, etc.
+            return;
         }
 
         // Food collision
@@ -491,6 +621,33 @@ class Game {
             const foodType = this.food.type;
             const color = foodType === 'NORMAL' ? CONFIG.THEMES[state.theme].food : CONFIG.POWERUPS[foodType].color;
             this.spawnParticles(newHead.x, newHead.y, color, state.combo);
+
+            // Labyrinth (walls-as-doors): every CONFIG.LABYRINTH_FOOD_PER_WALL food unlocks
+            // the next locked door, in deterministic order (top → bottom → left → right).
+            // When all 4 doors are unlocked we award a room-completion bonus.
+            if (state.gameMode === GameMode.LABYRINTH) {
+                state.foodEatenThisRoom++;
+                const target = CONFIG.LABYRINTH_FOOD_PER_WALL;
+                const targetUnlocks = Math.min(
+                    Math.floor(state.foodEatenThisRoom / target),
+                    state.walls.length
+                );
+                let unlockedAny = false;
+                while (state.unlockedWalls.length < targetUnlocks
+                       && state.unlockedWalls.length < state.walls.length) {
+                    state.unlockedWalls.push(state.walls[state.unlockedWalls.length]);
+                    unlockedAny = true;
+                }
+                if (unlockedAny) {
+                    state.gridBrightness = Math.max(state.gridBrightness, 2.0);
+                    state.chromaticGlitch = Math.max(state.chromaticGlitch, 0.6);
+                    if (state.current !== GameState.MENU) audio.playPowerup();
+                }
+                if (state.unlockedWalls.length === state.walls.length && state.walls.length > 0) {
+                    state.score += 200 * state.roomsEntered;
+                    state.levelUpFlash = Math.max(state.levelUpFlash, 0.6);
+                }
+            }
 
             // Trigger Grid Ripple & Flashes
             if (CONFIG.VISUALS.enabled) {
@@ -567,7 +724,13 @@ class Game {
         }
 
         this.update(dt);
-        
+
+        // Decay the level-up flash here (in loop, not update) so it continues during pause
+        // and gameover — otherwise the flash would freeze on screen when the player pauses.
+        if (state.levelUpFlash > 0) {
+            state.levelUpFlash = Math.max(0, state.levelUpFlash - dt / 1500);
+        }
+
         // Render
         let currentTickRate = this.tickRate;
         if (state.activePowerup === 'SLOW') currentTickRate *= 1.5;

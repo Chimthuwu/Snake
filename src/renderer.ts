@@ -98,16 +98,111 @@ export class Renderer {
 
     drawWalls(ctx, cellSize, colors) {
         if (state.walls.length === 0) return;
+        const time = Date.now();
+        // Synth pulse: walls breathe faster when the grid is hot (level up flash)
+        const tempo = 1.0 + Math.max(0, state.gridBrightness - 1) * 0.6 + (state.levelUpFlash > 0 ? 0.8 : 0);
+        const pulse = 1.0 + Math.sin((time / 220) * tempo) * 0.28;
+        const ripple = (time / 1200) % 1;
+        const rotationRing = (time / 700) % (Math.PI * 2);
+
         const isLethal = state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD;
-        ctx.fillStyle = isLethal ? colors.wall : colors.snakeHead;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = isLethal ? colors.wall : colors.snakeHead;
+        // Wall: red/magenta neon for hostile barriers, cyan-teal when traversable
+        const coreColor = isLethal ? colors.wall : colors.snakeHead;
+        const defaultRim = isLethal ? '#ff00ff' : colors.food;
+        const accentColor = isLethal ? '#ffffff' : colors.grid;
+
         state.walls.forEach(wall => {
+            // Per-wall overrides: an unlocked door cell becomes cyan with extra bloom + a
+            // rotating 4-arc ring (it doesn't kill the player — it's a traversable passage).
+            const isUnlocked = state.unlockedWalls && state.unlockedWalls.some(w => w.x === wall.x && w.y === wall.y);
+            const wallRim = isUnlocked ? '#00ffff' : defaultRim;
+            const wallShadowMul = isUnlocked ? 1.2 : 0.85;
+            const wallCore = isUnlocked ? '#00ffff' : coreColor;
+
+            const cx = wall.x * cellSize;
+            const cy = wall.y * cellSize;
+            const pad = Math.max(1.5, cellSize * 0.08);
+
+            // 1) Outer halo (entire cell glows via shadowBlur)
+            ctx.save();
+            ctx.shadowBlur = cellSize * wallShadowMul * pulse;
+            ctx.shadowColor = wallRim;
+            ctx.fillStyle = wallRim;
+            ctx.globalAlpha = 0.55;
+            ctx.fillRect(cx, cy, cellSize, cellSize);
+            ctx.restore();
+
+            // 2) Bright core with radial gradient (white-hot center → colored skin → fade)
+            ctx.save();
+            const cxMid = cx + cellSize / 2;
+            const cyMid = cy + cellSize / 2;
+            const grad = ctx.createRadialGradient(cxMid, cyMid, 0, cxMid, cyMid, cellSize * 0.55);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.22, wallCore);
+            grad.addColorStop(1, 'rgba(0,0,0,0.55)');
+            ctx.fillStyle = grad;
+            ctx.globalAlpha = 0.92;
+            ctx.fillRect(cx + pad, cy + pad, cellSize - 2 * pad, cellSize - 2 * pad);
+            ctx.restore();
+
+            // 3) Animated circuit scan lines (cheap: 2 strokes per cell)
+            ctx.save();
+            ctx.strokeStyle = wallRim;
+            ctx.globalAlpha = 0.5 + 0.35 * pulse;
+            ctx.lineWidth = 1;
+            const shim = ripple * cellSize;
             ctx.beginPath();
-            ctx.rect(wall.x * cellSize, wall.y * cellSize, cellSize, cellSize);
-            ctx.fill();
+            ctx.moveTo(cx - cellSize * 0.2 + shim, cy + pad);
+            ctx.lineTo(cx - cellSize * 0.2 + shim + cellSize * 0.25, cy + cellSize - pad);
+            ctx.stroke();
+            ctx.restore();
+
+            // 4) Neon corner brackets — give the wall a “panel” look, neon HUD vibe
+            ctx.save();
+            ctx.strokeStyle = accentColor;
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.85;
+            const bracketLen = Math.min(8, cellSize * 0.3);
+            // Top-left bracket
+            ctx.beginPath();
+            ctx.moveTo(cx + pad, cy + pad + bracketLen);
+            ctx.lineTo(cx + pad, cy + pad);
+            ctx.lineTo(cx + pad + bracketLen, cy + pad);
+            ctx.stroke();
+            // Bottom-right bracket
+            ctx.beginPath();
+            ctx.moveTo(cx + cellSize - pad - bracketLen, cy + cellSize - pad);
+            ctx.lineTo(cx + cellSize - pad, cy + cellSize - pad);
+            ctx.lineTo(cx + cellSize - pad, cy + cellSize - pad - bracketLen);
+            ctx.stroke();
+            ctx.restore();
+
+            // 5) UNLOCKED DOOR: rotating 4-arc pulse ring marks it traversable.
+            if (isUnlocked) {
+                ctx.save();
+                ctx.strokeStyle = '#ffffff';
+                ctx.globalAlpha = 0.85;
+                ctx.lineWidth = 1.5;
+                for (let i = 0; i < 4; i++) {
+                    const a = rotationRing + (i / 4) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.arc(cx + cellSize / 2, cy + cellSize / 2, cellSize * 0.65, a, a + Math.PI / 6);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
         });
-        ctx.shadowBlur = 0;
+
+        // Level-up flash overlay tint (draws after walls so it sits on top)
+        if (state.levelUpFlash > 0) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(0.6, state.levelUpFlash * 0.6);
+            ctx.fillStyle = colors.food;
+            for (const w of state.walls) {
+                ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize, cellSize);
+            }
+            ctx.restore();
+        }
     }
 
     draw(gameState, particles, dt, accumulator, tickRate) {
@@ -161,27 +256,56 @@ export class Renderer {
 
         if (state.portal) {
             const p = state.portal;
-            const portalColor = '#9400D3'; // Deep violet
-            const pulse = 1.0 + Math.sin(Date.now() / 100) * 0.3;
-            
-            ctx.save();
-            ctx.shadowBlur = 60;
-            ctx.shadowColor = portalColor;
-            
-            const centerX = p.x * cellSize + cellSize / 2;
-            const centerY = p.y * cellSize + cellSize / 2;
-            const radius = (cellSize / 2) * pulse;
+            // Cyan when armed (player can use it NOW), violet while dormant
+            const portalColor = state.portalArmed ? '#00ffff' : '#9400D3';
+            const accent = '#ffffff';
+            const breath = 1.0 + Math.sin(Date.now() / 130) * 0.32;
+            const rotation = (Date.now() / 700) % (Math.PI * 2);
 
-            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-            grad.addColorStop(0, '#fff');
-            grad.addColorStop(0.3, portalColor);
+            const cx = p.x * cellSize + cellSize / 2;
+            const cy = p.y * cellSize + cellSize / 2;
+            const radius = (cellSize * 0.7) * breath;
+
+            // Inner orb (hot center → portal skin → transparent halo)
+            ctx.save();
+            ctx.shadowBlur = 70;
+            ctx.shadowColor = portalColor;
+            const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+            grad.addColorStop(0, accent);
+            grad.addColorStop(0.2, portalColor);
+            grad.addColorStop(0.7, portalColor);
             grad.addColorStop(1, 'transparent');
-            
             ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
+
+            // Rotating ring of 4 short arcs — animated “active” indicator
+            ctx.save();
+            ctx.strokeStyle = accent;
+            ctx.globalAlpha = state.portalArmed ? 0.85 : 0.4;
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 4; i++) {
+                const a = rotation + (i / 4) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * 1.45, a, a + Math.PI / 6);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // If armed, blink the outer halo to draw the eye
+            if (state.portalArmed) {
+                ctx.save();
+                ctx.globalAlpha = 0.35 + 0.35 * Math.sin(Date.now() / 80);
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = portalColor;
+                ctx.fillStyle = portalColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius * 1.7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
         }
 
         const isPhantomEffect = state.activePowerup === 'GHOST' || state.difficulty === 'PHANTOM';

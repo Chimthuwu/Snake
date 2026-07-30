@@ -64,6 +64,7 @@ interface Config {
     DIFFICULTIES: { [key: string]: Difficulty };
     MIN_TICK_RATE: number;
     POWERUP_CHANCE: number;
+    LABYRINTH_FOOD_PER_WALL: number;
     POWERUP_DURATION: number;
     POWERUPS: { [key: string]: Powerup };
     VISUALS: VisualConfig;
@@ -91,6 +92,10 @@ export const CONFIG: Config = {
     
     MIN_TICK_RATE: 40,
     
+    // Labyrinth (walls-as-doors): each unlocked wall costs this much food in the current room.
+    // 4 walls × 4 food = 16 food to fully open a room.
+    LABYRINTH_FOOD_PER_WALL: 4,
+
     // Powerups
     POWERUP_CHANCE: 0.15,
     POWERUP_DURATION: 8000,

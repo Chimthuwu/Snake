@@ -47,7 +47,16 @@ class StateManager {
     walls: {x: number, y: number}[] = [];
     portal: {x: number, y: number} | null = null;
     currentRoom: {x: number, y: number} = {x: 0, y: 0};
-    
+
+    // Labyrinth progression (walls-as-doors)
+    labyrinthDepth: number = 0; // current depth (0 = first room)
+    roomsEntered: number = 1;  // how many rooms the player has entered total (resets on game over)
+    foodEatenThisRoom: number = 0; // food collected in the *current* room
+    unlockedWalls: {x: number, y: number}[] = []; // subset of doors that are currently unlocked (0..4)
+
+    // For level-up HUD flash (used on room-enter celebrations)
+    levelUpFlash: number = 0;
+
     ripples: Ripple[] = [];
     cameraImpulse: Vec = { x: 0, y: 0, vx: 0, vy: 0 };
     boardTilt: Vec = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -77,7 +86,15 @@ class StateManager {
         this.powerupTimer = 0;
         this.snakeLength = 3;
         this.entitiesCount = 0;
-        
+
+        // Labyrinth progression (walls-as-doors)
+        this.labyrinthDepth = 0;
+        this.roomsEntered = 1;
+        this.foodEatenThisRoom = 0;
+        this.unlockedWalls = [];
+        this.currentRoom = { x: 0, y: 0 };
+        this.levelUpFlash = 0;
+
         // Visual FX State
         this.ripples = [];
         this.cameraImpulse = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -91,6 +108,16 @@ class StateManager {
     setGameMode(mode: GameMode) {
         this.gameMode = mode;
         localStorage.setItem('neon_snake_gamemode', mode);
+    }
+
+    /** Rotate to the next theme. Used on Labyrinth level-up. Returns the new theme key. */
+    cycleTheme(): string {
+        const themes = Object.keys(CONFIG.THEMES);
+        const idx = themes.indexOf(this.theme);
+        const next = themes[(idx + 1) % themes.length];
+        this.theme = next;
+        localStorage.setItem('neon_snake_theme', next);
+        return next;
     }
 
     setHighScore(score: number): boolean {
