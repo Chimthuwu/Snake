@@ -156,21 +156,26 @@ class Game {
         requestAnimationFrame((t) => this.loop(t));
     }
 
-    resetGameData() {
-        state.reset();
-        
-        // Labyrinth mode (walls-as-doors): the room has 4 perimeter doors, all locked.
-        if (state.gameMode === GameMode.LABYRINTH) {
-            const halfGrid = Math.floor(CONFIG.GRID_SIZE / 2);
-            state.walls = [
-                { x: halfGrid, y: 0 },                     // top door
-                { x: halfGrid, y: CONFIG.GRID_SIZE - 1 },  // bottom door
-                { x: 0, y: halfGrid },                     // left door
-                { x: CONFIG.GRID_SIZE - 1, y: halfGrid },  // right door
-            ];
-        } else {
-            state.walls = [];
-        }
+resetGameData() {
+    state.reset();
+
+    // Mid-perimeter door column/row. Declared at function scope (not inside the
+    // first `if (LABYRINTH)` block) because the spawn loop + fallback below also
+    // reference it — a block-scoped const here would throw ReferenceError at
+    // runtime when entering Labyrinth mode.
+    const halfGrid = Math.floor(CONFIG.GRID_SIZE / 2);
+
+    // Labyrinth mode (walls-as-doors): the room has 4 perimeter doors, all locked.
+    if (state.gameMode === GameMode.LABYRINTH) {
+        state.walls = [
+            { x: halfGrid, y: 0 },                     // top door
+            { x: halfGrid, y: CONFIG.GRID_SIZE - 1 },  // bottom door
+            { x: 0, y: halfGrid },                     // left door
+            { x: CONFIG.GRID_SIZE - 1, y: halfGrid },  // right door
+        ];
+    } else {
+        state.walls = [];
+    }
 
         this.snake = [];
         let startX, startY;
