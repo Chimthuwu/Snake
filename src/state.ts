@@ -68,12 +68,10 @@ class StateManager {
     constructor() {
         this.reset();
         this.highScore = parseInt(localStorage.getItem('neon_snake_highscore') || '0', 10);
-        this.theme = localStorage.getItem('neon_snake_theme') || CONFIG.defaultTheme;
-        this.gameMode = GameMode.CLASSIC; // Default value
-        const storedGameMode = localStorage.getItem('neon_snake_gamemode');
-        if (storedGameMode && Object.values(GameMode).includes(storedGameMode as GameMode)) {
-            this.gameMode = storedGameMode as GameMode;
-        }
+        // Defaults applied above: theme='NEON' (CONFIG.defaultTheme), gameMode=CLASSIC,
+        // difficulty='NORMAL'. We deliberately do NOT read theme/gameMode from localStorage
+        // so every session starts fresh.
+        // (cycleTheme() / setGameMode() still write to localStorage for backup, just never read.)
     }
 
     reset() {
@@ -107,6 +105,9 @@ class StateManager {
 
     setGameMode(mode: GameMode) {
         this.gameMode = mode;
+        // NOTE: legacy localStorage write. The constructor no longer reads it (defaults always
+        // win at session start), so this save is currently inert — retained for a future
+        // per-account / cloud-sync feature where we'd want the user's last selection.
         localStorage.setItem('neon_snake_gamemode', mode);
     }
 
@@ -116,6 +117,7 @@ class StateManager {
         const idx = themes.indexOf(this.theme);
         const next = themes[(idx + 1) % themes.length];
         this.theme = next;
+        // NOTE: legacy localStorage write. Same inert-for-now rationale as setGameMode().
         localStorage.setItem('neon_snake_theme', next);
         return next;
     }

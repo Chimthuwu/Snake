@@ -315,11 +315,12 @@ class Game {
     }
 
     start() {
-        audio.resume();
-        audio.playMusic();
+        // Set state FIRST so a thrown audio call can never trap the player on GAMEOVER.
         this.resetGameData();
         state.current = GameState.PLAYING;
         this.ui.updateScreens();
+        audio.resume().catch(() => {});
+        audio.playInGameMusic().catch(() => {});
     }
 
     togglePause() {
@@ -332,8 +333,12 @@ class Game {
     }
 
     quitToMenu() {
+        // State first, UI second, audio last and caught. Order matters: if audio previously
+        // threw and somehow froze the click chain, the player could be stuck on GAMEOVER with
+        // no Menu / Restart response. Now state + UI are guaranteed to update.
         state.current = GameState.MENU;
         this.ui.updateScreens();
+        audio.playMenuMusic().catch(() => {});
     }
 
     gameOver() {
@@ -711,9 +716,16 @@ class Game {
         // Cap dt to prevent spiral of death on tab switch
         if (dt > 100) dt = 16;
 
-        // Global input check (Pause)
+        // Global input check (Pause via Space OR Escape)
         if (this.input.keys['Space']) {
             this.input.keys['Space'] = false; // consume
+            this.togglePause();
+        }
+        if (this.input.keys['Escape']) {
+            this.input.keys['Escape'] = false;
+            // ESC mirrors Space: open pause when playing, close pause when paused.
+            // togglePause() itself is a no-op when state is MENU/GAMEOVER so it's safe
+            // to fire unconditionally without trapping the player.
             this.togglePause();
         }
         if (this.input.keys['KeyP']) {

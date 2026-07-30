@@ -4,6 +4,8 @@ class AudioManager {
     ctx: AudioContext;
     masterGain: GainNode;
     musicTracks: string[];
+    /** Index of the menu song ("Melancholics Anonymous"). Pinned to track01.mp3. */
+    static readonly MENU_TRACK_INDEX = 0;
     currentTrackIndex: number;
     musicPlayer: HTMLAudioElement;
     analyser: AnalyserNode | null;
@@ -11,6 +13,8 @@ class AudioManager {
     frequencyData: (Uint8Array<ArrayBuffer>) | null;
     isMusicPlaying: boolean = false;
     isStarting: boolean = false; // prevents racing .play() calls
+    isInGameShuffle: boolean = false; // true once an in-game track has been started; used to
+                                      // exclude the menu song from "ended" auto-advance.
     private _lastSetSrc: string = '';
 
     constructor() {
@@ -132,9 +136,41 @@ class AudioManager {
         }
     }
 
+    /** Pin playback to the menu song (track01 = "Melancholics Anonymous"). */
+    async playMenuMusic(): Promise<void> {
+        this.currentTrackIndex = AudioManager.MENU_TRACK_INDEX;
+        this.isInGameShuffle = false;
+        return this.playMusic();
+    }
+
+    /** Pick a random non-menu track and start playing. Avoids the menu track so
+     *  the in-game shuffle stays fresh. */
+    async playInGameMusic(): Promise<void> {
+        const total = this.musicTracks.length;
+        let next = AudioManager.MENU_TRACK_INDEX;
+        while (next === AudioManager.MENU_TRACK_INDEX) {
+            next = Math.floor(Math.random() * total);
+        }
+        this.currentTrackIndex = next;
+        this.isInGameShuffle = true;
+        return this.playMusic();
+    }
+
     nextTrack(): void {
-        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.musicTracks.length;
+        // Random shuffle (not just +1) so the queue feels like a music player.
+        // Stay out of the MENU_TRACK_INDEX slot during in-game shuffling so the in-game
+        // queue never accidentally plays the menu song.
+        const total = this.musicTracks.length;
+        let next = this.currentTrackIndex;
+        let safety = 0;
+        while ((next === this.currentTrackIndex
+                || (this.isInGameShuffle && next === AudioManager.MENU_TRACK_INDEX))
+               && safety++ < 16) {
+            next = Math.floor(Math.random() * total);
+        }
+        this.currentTrackIndex = next;
         this.isMusicPlaying = false;
+        this.isInGameShuffle = true;  // any track that ends was started in-game
         // Small delay before next track to avoid rapid-fire errors
         setTimeout(() => this.playMusic(), 300);
     }
@@ -188,6 +224,7 @@ class AudioManager {
     }
 
     playDie() {
+        if (state.isMuted) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
