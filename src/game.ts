@@ -220,7 +220,10 @@ resetGameData() {
         }
 
         generateFood(): Food {
-        let newFood: Food;
+        // Definite-assignment assertion: the while loop below always runs at least
+        // once (valid starts false) and assigns newFood inside the loop body, but the
+        // strict-mode compiler doesn't perform that flow analysis.
+        let newFood!: Food;
         let valid = false;
         while (!valid) {
             newFood = {
@@ -734,13 +737,16 @@ resetGameData() {
         // Food collision
         const ateFood = this.food && Math.abs(newHead.x - this.food.x) < 1 && Math.abs(newHead.y - this.food.y) < 1;
 
-        if (ateFood) {
+        if (ateFood && this.food) {
+            // Local non-null alias — the short-circuit on ateFood above doesn't narrow
+            // this.food's type for the compiler, so we re-check + alias explicitly.
+            const food = this.food;
             if (state.current !== GameState.MENU) {
                 audio.playEat(state.combo);
                 if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_EAT, CONFIG.SHAKE_DURATION_EAT);
             }
 
-            const foodType = this.food.type;
+            const foodType = food.type;
             const color = foodType === 'NORMAL' ? CONFIG.THEMES[state.theme].food : CONFIG.POWERUPS[foodType].color;
             this.spawnParticles(newHead.x, newHead.y, color, state.combo);
 
