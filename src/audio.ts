@@ -9,7 +9,9 @@ class AudioManager {
     analyser: AnalyserNode | null;
     source: MediaElementAudioSourceNode | null;
     frequencyData: (Uint8Array<ArrayBuffer>) | null;
-    isMusicPlaying: boolean;
+    isMusicPlaying: boolean = false;
+    isStarting: boolean = false; // prevents racing .play() calls
+    private _lastSetSrc: string = '';
 
     constructor() {
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -48,6 +50,19 @@ class AudioManager {
             console.warn('Audio: failed to load track, skipping...');
             this.nextTrack();
         });
+
+        // Tab hidden -> pause; tab visible -> resume via the autoplay-tolerant path.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (this.isMusicPlaying) {
+                    this.musicPlayer.pause();
+                    this.isMusicPlaying = false;
+                }
+            } else {
+                // resume() awaits ctx.resume() and tolerates autoplay-block (no-op if muted or autoplay-rejected).
+                this.resume().catch(() => {});
+            }
+        });
     }
 
     async ensureContextReady(): Promise<void> {
@@ -82,18 +97,25 @@ class AudioManager {
 
     async playMusic(): Promise<void> {
         if (state.isMuted) return;
-        await this.ensureContextReady();
-        this.setupAnalyser();
-        if (!this.musicPlayer.src.endsWith(this.musicTracks[this.currentTrackIndex])) {
-            this.musicPlayer.src = this.musicTracks[this.currentTrackIndex];
-        }
-        if (this.musicPlayer.paused) {
-            try {
+        if (this.isStarting || (!this.musicPlayer.paused && this.isMusicPlaying)) return;
+        this.isStarting = true;
+        try {
+            await this.ensureContextReady();
+            this.setupAnalyser();
+            const desired = this.musicTracks[this.currentTrackIndex];
+            // Cache last desired src to avoid string-comparison fragility (browser resolves to absolute URL)
+            if (this._lastSetSrc !== desired) {
+                this.musicPlayer.src = desired;
+                this._lastSetSrc = desired;
+            }
+            if (this.musicPlayer.paused) {
                 await this.musicPlayer.play();
                 this.isMusicPlaying = true;
-            } catch (e) {
-                console.log('Audio: play blocked (user interaction may be needed)', e);
             }
+        } catch (e) {
+            console.log('Audio: play blocked or failed', e);
+        } finally {
+            this.isStarting = false;
         }
     }
 
