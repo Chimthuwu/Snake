@@ -29,16 +29,14 @@ html, body {
     overflow: hidden;
     height: 100%;
     width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 /* ===== Space Ambient Background ===== */
 #app {
-    position: relative;
-    width: 100%;
-    height: 100%;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -63,20 +61,52 @@ html, body {
     to { transform: rotate(5deg) scale(1.1); }
 }
 
-/* ===== CRT Scanline Overlay ===== */
+/* ===== Retrowave Grid Horizon (visible SVG via CSS gradient lines) ===== */
+#retrowave-horizon {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 50vh;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        /* Vertical grid lines (perspective) */
+        linear-gradient(90deg,
+            transparent 0%, rgba(255, 0, 255, 0.4) 50%, transparent 100%
+        ),
+        /* Horizontal grid lines */
+        repeating-linear-gradient(
+            0deg,
+            transparent 0px,
+            transparent 38px,
+            rgba(255, 0, 255, 0.6) 38px,
+            rgba(255, 0, 255, 0.6) 39px,
+            transparent 39px,
+            transparent 40px
+        );
+    background-size: 100% 100%, 100% 100%;
+    /* Skewing for fake perspective */
+    transform: perspective(60vh) rotateX(60deg);
+    transform-origin: bottom center;
+    -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%);
+    mask-image: linear-gradient(to top, black 0%, transparent 100%);
+    opacity: 0.35;
+}
+
+/* ===== CRT Scanline Overlay (visible) ===== */
 #app::after {
     content: "";
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: repeating-linear-gradient(
         0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.03) 2px,
-        rgba(0, 0, 0, 0.03) 4px
+        rgba(0, 0, 0, 0) 0px,
+        rgba(0, 0, 0, 0) 2px,
+        rgba(0, 0, 0, 0.25) 3px,
+        rgba(0, 0, 0, 0.25) 4px
     );
     pointer-events: none;
     z-index: 9998;
+    mix-blend-mode: multiply;
 }
 
 /* ===== Vignette ===== */
@@ -96,12 +126,16 @@ html, body {
 /* ===== Game Container ===== */
 #game-container {
     position: relative;
-    width: 100%;
-    max-width: min(95vmin, 800px);
-    aspect-ratio: 1 / 1;
+    width: min(95vmin, 1100px);
+    height: min(95vmin, 1100px);
     border-radius: 16px;
     overflow: hidden;
     background-color: rgba(5, 5, 12, 0.85);
+    box-shadow:
+        0 0 0 1px rgba(0, 242, 255, 0.15),
+        0 0 80px rgba(0, 242, 255, 0.15),
+        0 40px 100px rgba(0, 0, 0, 0.9);
+    z-index: 10;
 }
 
 #game-canvas {
@@ -517,19 +551,15 @@ html, body {
 }
 
 #btn-portfolio-toggle {
-    right: calc(50% + 50px);
-    transform: translateX(50%);
+    right: 20px;
 }
 
 #btn-music-toggle {
-    right: 50%;
-    transform: translateX(50%);
-    bottom: 70px;
+    right: 80px;
 }
 
 #btn-mute-toggle {
-    right: calc(50% - 50px);
-    transform: translateX(-50%);
+    right: 140px;
 }
 
 /* ===== Mobile D-Pad ===== */
@@ -658,41 +688,65 @@ html, body {
     100% { clip: rect(38px, 9999px, 49px, 0); }
 }
 
-/* ===== Synthwave Sun Element (CSS art) ===== */
+/* ===== Synthwave Sun (CSS gradient art — visible glow) ===== */
 #synthwave-sun {
-    position: absolute;
-    bottom: 0;
+    position: fixed;
+    bottom: 8vh;
     left: 50%;
     transform: translateX(-50%);
-    width: min(60vmin, 400px);
-    height: min(30vmin, 200px);
+    width: min(70vmin, 600px);
+    height: min(70vmin, 600px);
     pointer-events: none;
-    z-index: 1;
-    opacity: 0.08;
-    background: 
-        radial-gradient(ellipse at 50% 100%, 
-            rgba(255, 0, 255, 0.4) 0%,
-            rgba(255, 100, 0, 0.2) 20%,
-            transparent 60%
+    z-index: 0;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 50%,
+            #ffea00 0%,
+            #ff7300 15%,
+            #ff00aa 35%,
+            rgba(176, 0, 255, 0.6) 55%,
+            transparent 70%
         );
+    filter: blur(2px);
+    opacity: 0.4;
+    animation: sun-pulse 4s ease-in-out infinite alternate;
+}
+#synthwave-sun::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 50%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 14%,
+        rgba(0, 0, 0, 0.6) 14%,
+        rgba(0, 0, 0, 0.6) 16%,
+        transparent 16%,
+        transparent 18%
+    );
+    /* Horizontal cut-out stripes on the bottom half (classic synthwave sun) */
+    -webkit-mask-image: linear-gradient(to top, black 0%, transparent 50%);
+    mask-image: linear-gradient(to top, black 0%, transparent 50%);
+}
+
+@keyframes sun-pulse {
+    from { transform: translateX(-50%) scale(1); opacity: 0.35; }
+    to   { transform: translateX(-50%) scale(1.05); opacity: 0.5; }
 }
 
 /* ===== Responsive: Tablets ===== */
 @media (max-width: 768px) {
     .glitch { font-size: clamp(1.8rem, 7vw, 2.5rem); }
     .subtitle { font-size: 0.9rem; margin-bottom: 30px; }
-    #game-container { border-radius: 0; border: none; max-width: 100vw; max-height: 100vh; }
+    #game-container {
+        width: 100vw;
+        height: 100vw;
+        max-width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
     .menu-panel { padding: clamp(16px, 4vmin, 30px); width: 90%; }
-    
-    #btn-portfolio-toggle {
-        right: calc(50% + 35px);
-    }
-    #btn-music-toggle {
-        bottom: 55px;
-    }
-    #btn-mute-toggle {
-        right: calc(50% - 35px);
-    }
 }
 
 /* ===== Responsive: Phones ===== */
@@ -717,21 +771,13 @@ html, body {
 /* ===== Responsive: Landscape phones ===== */
 @media (max-height: 500px) and (orientation: landscape) {
     #game-container {
-        max-width: min(70vh, 80vw);
-        max-height: 90vh;
+        width: min(90vh, 90vw);
+        height: min(90vh, 90vw);
     }
     .controls-hint {
         display: none;
     }
     .subtitle {
         margin-bottom: 16px;
-    }
-}
-
-/* ===== Responsive: Large screens ===== */
-@media (min-width: 1200px) {
-    #game-container {
-        max-width: min(70vmin, 900px);
-        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.9), 0 0 60px rgba(0, 242, 255, 0.08);
     }
 }

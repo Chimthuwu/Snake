@@ -15,7 +15,7 @@ class AudioManager {
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
         this.masterGain.connect(this.ctx.destination);
-        this.masterGain.gain.value = 0.3;
+        this.masterGain.gain.value = 0.8; // Loud enough to actually hear
         this.analyser = null;
         this.source = null;
         this.frequencyData = null;
@@ -38,7 +38,7 @@ class AudioManager {
         this.musicPlayer = new Audio();
         this.musicPlayer.crossOrigin = "anonymous";
         this.musicPlayer.loop = false;
-        this.musicPlayer.volume = 0.25;
+        this.musicPlayer.volume = 0.7; // 0.7 * master(0.8) ~= 0.56 effective
 
         // Auto-advance to next track
         this.musicPlayer.addEventListener('ended', () => this.nextTrack());
@@ -84,12 +84,16 @@ class AudioManager {
         if (state.isMuted) return;
         await this.ensureContextReady();
         this.setupAnalyser();
-        this.musicPlayer.src = this.musicTracks[this.currentTrackIndex];
-        try {
-            await this.musicPlayer.play();
-            this.isMusicPlaying = true;
-        } catch (e) {
-            console.log('Audio: play blocked (user interaction may be needed)', e);
+        if (!this.musicPlayer.src.endsWith(this.musicTracks[this.currentTrackIndex])) {
+            this.musicPlayer.src = this.musicTracks[this.currentTrackIndex];
+        }
+        if (this.musicPlayer.paused) {
+            try {
+                await this.musicPlayer.play();
+                this.isMusicPlaying = true;
+            } catch (e) {
+                console.log('Audio: play blocked (user interaction may be needed)', e);
+            }
         }
     }
 
@@ -115,7 +119,7 @@ class AudioManager {
 
     async resume(): Promise<void> {
         await this.ensureContextReady();
-        if (!this.isMusicPlaying && !state.isMuted) {
+        if (!this.isMusicPlaying && !state.isMuted && this.musicPlayer.paused) {
             this.playMusic();
         }
     }
