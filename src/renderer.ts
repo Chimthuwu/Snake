@@ -99,9 +99,10 @@ export class Renderer {
     drawWalls(ctx, cellSize, colors) {
         if (state.walls.length === 0) return;
         const time = Date.now();
-        const tempo = 1.0 + Math.max(0, state.gridBrightness - 1) * 0.6 + (state.levelUpFlash > 0 ? 0.8 : 0);
+        const tempo = 1.0 + Math.max(0, state.gridBrightness - 1) * 0.4 + (state.levelUpFlash > 0 ? 0.5 : 0);
 
         const isLethal = state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD;
+        const palette = isLethal ? colors.wallPalette : colors.obstaclePalette;
 
         state.walls.forEach(wall => {
             const isUnlocked = state.unlockedWalls && state.unlockedWalls.some(w => w.x === wall.x && w.y === wall.y);
@@ -110,31 +111,20 @@ export class Renderer {
             const sz = cellSize;
 
             // Per-cell phase offset drives the "evolving" gradient — neighboring walls
-            // blaze through the synthwave palette slightly out of sync, producing a slow
-            // color wave that crawls across the maze.
+            // shift through their theme palette slightly out of sync, producing a calm
+            // color wave that crawls across the maze. Animation rate was previously
+            // 1.1 s/cycle (seizure-inducing); now ~8 s/cycle for a meditative feel.
             const cellPhase = (wall.x * 0.13 + wall.y * 0.09) % 1;
-            const animOffset = (((time / 1100) * tempo + cellPhase) % 1 + 1) % 1;
+            const animOffset = (((time / 8000) * tempo + cellPhase) % 1 + 1) % 1;
 
             // Diagonal linear gradient — the entire cell fills with the gradient. No
             // circles, no inner shapes, no per-wall decorations inside the rectangle.
             const grad = ctx.createLinearGradient(cx, cy, cx + sz, cy + sz);
-            if (isUnlocked) {
-                // Cyan-mint: clearly "passage / safe to enter"
-                grad.addColorStop((animOffset - 0.35 + 1) % 1, '#05ffa1');
-                grad.addColorStop(animOffset, '#01cdfe');
-                grad.addColorStop((animOffset + 0.35) % 1, '#ffffff');
-            } else if (isLethal) {
-                // Synthwave hot palette: deep purple -> hot pink -> cyan, the classic
-                // "danger" gradient evolving through the maze.
-                grad.addColorStop((animOffset - 0.35 + 1) % 1, '#3a0ca3');
-                grad.addColorStop(animOffset, '#ff006e');
-                grad.addColorStop((animOffset + 0.35) % 1, '#3a86ff');
-            } else {
-                // Non-lethal OPEN_WORLD walls: cyan -> mint -> soft cyan.
-                grad.addColorStop((animOffset - 0.35 + 1) % 1, '#01cdfe');
-                grad.addColorStop(animOffset, '#05ffa1');
-                grad.addColorStop((animOffset + 0.35) % 1, '#90e0ef');
-            }
+            const stopPalette = isUnlocked ? colors.unlockedPalette : palette;
+            const wrap = (offset) => ((offset % 1) + 1) % 1;
+            grad.addColorStop(wrap(animOffset - 0.35), stopPalette[0]);
+            grad.addColorStop(animOffset, stopPalette[1]);
+            grad.addColorStop(wrap(animOffset + 0.35), stopPalette[2]);
 
             // Single rectangular fill (no inner objects).
             ctx.fillStyle = grad;
@@ -150,7 +140,7 @@ export class Renderer {
         if (state.levelUpFlash > 0) {
             ctx.save();
             ctx.globalAlpha = Math.min(0.35, state.levelUpFlash * 0.45);
-            ctx.fillStyle = '#ff006e';
+            ctx.fillStyle = palette[1];
             for (const w of state.walls) {
                 ctx.fillRect(w.x * cellSize, w.y * cellSize, cellSize, cellSize);
             }

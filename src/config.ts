@@ -56,6 +56,12 @@ interface ColorScheme {
     snakeGhost: string;
     food: string;
     wall: string;
+    /** 3-color gradient for lethal Labyrinth/Open-World walls. [accent, danger, highlight] */
+    wallPalette: [string, string, string];
+    /** 3-color gradient for unlocked doors — should read as "passage / safe". */
+    unlockedPalette: [string, string, string];
+    /** 3-color gradient for non-lethal decorative obstacles (CLASSIC art walls). */
+    obstaclePalette: [string, string, string];
     particles: string[];
 }
 
@@ -173,6 +179,12 @@ export const CONFIG: Config = {
             snakeGhost: 'hsla(280, 100%, 60%, 0.6)',
             food: 'hsl(330, 100%, 50%)',
             wall: 'hsl(0, 80%, 50%)',
+            // Synthwave classic: violet → hot pink → cyan
+            wallPalette: ['hsl(280, 100%, 60%)', 'hsl(330, 100%, 55%)', 'hsl(180, 100%, 60%)'],
+            // Passage glow: cyan → white → mint
+            unlockedPalette: ['hsl(180, 100%, 60%)', '#ffffff', 'hsl(160, 100%, 65%)'],
+            // Decorative obstacles (CLASSIC levels): softer tramlines
+            obstaclePalette: ['hsl(200, 100%, 55%)', 'hsl(280, 100%, 60%)', 'hsl(180, 100%, 60%)'],
             particles: ['hsl(180, 100%, 50%)', 'hsl(330, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(280, 100%, 60%)']
         },
         EMBER: {
@@ -183,6 +195,12 @@ export const CONFIG: Config = {
             snakeGhost: 'hsla(300, 100%, 60%, 0.6)',
             food: 'hsl(150, 100%, 50%)',
             wall: 'hsl(0, 80%, 50%)',
+            // Heat ramp: deep red → orange → bright yellow
+            wallPalette: ['hsl(0, 80%, 38%)', 'hsl(20, 100%, 55%)', 'hsl(45, 100%, 62%)'],
+            // Passage glow: gold → white → amber
+            unlockedPalette: ['hsl(45, 100%, 60%)', '#ffffff', 'hsl(35, 100%, 65%)'],
+            // Decorative obstacles: amber → orange → soft gold
+            obstaclePalette: ['hsl(35, 100%, 50%)', 'hsl(15, 100%, 55%)', 'hsl(45, 100%, 55%)'],
             particles: ['hsl(45, 100%, 50%)', 'hsl(30, 100%, 50%)', 'hsl(10, 100%, 50%)']
         },
         OCEAN: {
@@ -193,6 +211,12 @@ export const CONFIG: Config = {
             snakeGhost: 'hsla(250, 100%, 70%, 0.6)',
             food: 'hsl(100, 100%, 50%)',
             wall: 'hsl(0, 80%, 50%)',
+            // Reef depth: deep navy → teal → lime accent
+            wallPalette: ['hsl(220, 100%, 28%)', 'hsl(190, 100%, 55%)', 'hsl(160, 80%, 55%)'],
+            // Passage glow: teal → white → mint
+            unlockedPalette: ['hsl(190, 100%, 60%)', '#ffffff', 'hsl(160, 100%, 65%)'],
+            // Decorative obstacles: teal → blue → soft aqua
+            obstaclePalette: ['hsl(220, 80%, 50%)', 'hsl(190, 100%, 60%)', 'hsl(170, 80%, 60%)'],
             particles: ['hsl(190, 100%, 60%)', 'hsl(210, 100%, 60%)', 'hsl(100, 100%, 50%)']
         }
     },
