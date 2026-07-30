@@ -5,136 +5,17 @@ import { Renderer } from './renderer.js';
 import { UIManager } from './ui.js';
 import { audio } from './audio.js';
 
-/* ===================== Procedural Labyrinth Helpers =====================
- * Mulberry32: deterministic seeded PRNG, small + fast for the cell-grid distribution.
- * The seed is base + labyrinthDepth*7919 so each room has stable, reproducible walls.
+/* ===================== Labyrinth Interior Walls =====================
+ * Labyrinth mode uses the same predefined simple wall patterns as Open World
+ * (TUNNELS, PILLARS, DIAGONAL) instead of generating a procedural maze. This
+ * keeps the room layout legible and matches the user's preference for simple
+ * designs over chaotic procedurally-generated walls.
  */
-function mulberry32(seed: number): () => number {
-    let s = (seed | 0) || 1;
-    return () => {
-        s = (s + 0x6D2B79F5) | 0;
-        let t = s;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
-
-const LABYRINTH_SEED_BASE = 0xC0FFEE;
-
-/** BFS check: is `start` reachable to ANY of `targets` in a grid where walls are blocked? */
-function isReachableToAllDoors(
-    start: {x: number, y: number},
-    targets: {x: number, y: number}[],
-    walls: {x: number, y: number}[],
-    grid: number
-): boolean {
-    const blocked = new Set<string>();
-    walls.forEach(w => blocked.add(`${w.x}_${w.y}`));
-    const deltas = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-    for (const target of targets) {
-        const visited = new Set<string>();
-        const queue: {x: number, y: number}[] = [start];
-        visited.add(`${start.x}_${start.y}`);
-        let found = false;
-        while (queue.length > 0) {
-            const cur = queue.shift()!;
-            if (cur.x === target.x && cur.y === target.y) { found = true; break; }
-            for (const [dx, dy] of deltas) {
-                const nx = cur.x + dx;
-                const ny = cur.y + dy;
-                if (nx < 0 || nx >= grid || ny < 0 || ny >= grid) continue;
-                if (blocked.has(`${nx}_${ny}`)) continue;
-                const k = `${nx}_${ny}`;
-                if (visited.has(k)) continue;
-                visited.add(k);
-                queue.push({ x: nx, y: ny });
-            }
-        }
-        if (!found) return false;
-    }
-    return true;
-}
-
-/** Build interior maze walls for one Labyrinth room.
- *  Guarantees:
- *   - The 4 perimeter door cells (and the cell just inside them) stay clear so the
- *     player can always cross through to the next room.
- *   - A 5×5 bubble around every snake segment is clear so the snake can never spawn on
- *     or adjacent to a wall.
- *   - Wall count ramps with labyrinthDepth so deeper rooms feel denser. */
-function generateLabyrinthInteriorWalls(
-    seed: number,
-    snakeCells: {x: number, y: number}[],
-    labyrinthDepth: number
-): {x: number, y: number}[] {
-    const grid = CONFIG.GRID_SIZE;
-    const half = Math.floor(grid / 2);
-    const forbidden = new Set<string>();
-    const k = (x: number, y: number) => `${x}_${y}`;
-
-    // Doors + the interior cell just inside each door stay clear (so the player can
-    // always fit through on the first tick after unlock).
-    forbidden.add(k(half, 0));
-    forbidden.add(k(half, grid - 1));
-    forbidden.add(k(0, half));
-    forbidden.add(k(grid - 1, half));
-    forbidden.add(k(half, 1));
-    forbidden.add(k(half, grid - 2));
-    forbidden.add(k(1, half));
-    forbidden.add(k(grid - 2, half));
-
-    // 5×5 spawn safety bubble around every snake segment
-    snakeCells.forEach(s => {
-        for (let dx = -2; dx <= 2; dx++) {
-            for (let dy = -2; dy <= 2; dy++) {
-                const x = s.x + dx;
-                const y = s.y + dy;
-                if (x >= 1 && x < grid - 1 && y >= 1 && y < grid - 1) {
-                    forbidden.add(k(x, y));
-                }
-            }
-        }
-    });
-
-    const snakeStart = snakeCells[0] || { x: 2, y: 2 };
-    const halfG = Math.floor(grid / 2);
-    // Connectivity targets: 1 cell INSIDE each perimeter door (we keep these cells clear
-    // anyway, so a successful BFS proves the snake can physically reach the door).
-    const doorTargets = [
-        { x: halfG, y: 1 },
-        { x: halfG, y: grid - 2 },
-        { x: 1, y: halfG },
-        { x: grid - 2, y: halfG },
-    ];
-
-    // Try up to 4 randomized generations: each retry uses a smaller target size (and a
-    // salt-modified seed) so connectivity almost always succeeds. Each retry tends to
-    // produce a slightly different layout but never more walls than the depth allows.
-    for (let retry = 0; retry < 4; retry++) {
-        const rng = mulberry32(((seed | 0) + retry * 31337) || 1);
-        const walls: {x: number, y: number}[] = [];
-        const base = Math.max(8, 26 - retry * 5);   // 26 -> 21 -> 16 -> 11
-        const ramp = Math.min(14, labyrinthDepth * 2) - retry * 3;
-        const target = Math.max(8, Math.min(40, base + ramp));
-
-        let attempts = 0;
-        while (walls.length < target && attempts < 600) {
-            attempts++;
-            const x = 1 + Math.floor(rng() * (grid - 2));
-            const y = 1 + Math.floor(rng() * (grid - 2));
-            if (forbidden.has(k(x, y))) continue;
-            if (walls.some(w => w.x === x && w.y === y)) continue;
-            walls.push({ x, y });
-        }
-
-        if (isReachableToAllDoors(snakeStart, doorTargets, walls, grid)) {
-            return walls;
-        }
-    }
-
-    // Final fallback: empty interior walls (door-unlock progression still gives purpose).
-    return [];
+function pickSimpleLabyrinthWalls(): {x: number, y: number}[] {
+    const patterns = Object.keys(CONFIG.LEVELS).filter(k => k !== 'EMPTY');
+    const key = patterns[Math.floor(Math.random() * patterns.length)];
+    // Clone the cells so callers can safely spread them into a new array.
+    return CONFIG.LEVELS[key].map(c => ({ x: c.x, y: c.y }));
 }
 
 class Game {
@@ -229,11 +110,7 @@ resetGameData() {
             // snake. The seed encodes the current labyrinthDepth so each room has stable
             // walls; deeper rooms get more walls.
             if (state.gameMode === GameMode.LABYRINTH) {
-                const interior = generateLabyrinthInteriorWalls(
-                    LABYRINTH_SEED_BASE + state.labyrinthDepth * 7919,
-                    tempSnake,
-                    state.labyrinthDepth
-                );
+                const interior = pickSimpleLabyrinthWalls();
                 state.walls = [
                     { x: halfGrid, y: 0 },                     // top door
                     { x: halfGrid, y: CONFIG.GRID_SIZE - 1 },  // bottom door
@@ -274,11 +151,7 @@ resetGameData() {
             // Regenerate interior walls in Labyrinth mode using the fallback snake so the
             // (1,1)–(1,3) head can't land on a leftover interior wall from the last attempt.
             if (state.gameMode === GameMode.LABYRINTH) {
-                const interior = generateLabyrinthInteriorWalls(
-                    LABYRINTH_SEED_BASE + state.labyrinthDepth * 7919,
-                    this.snake,
-                    state.labyrinthDepth
-                );
+                const interior = pickSimpleLabyrinthWalls();
                 state.walls = [
                     { x: halfGrid, y: 0 },
                     { x: halfGrid, y: CONFIG.GRID_SIZE - 1 },
@@ -418,13 +291,8 @@ resetGameData() {
         if (moveX === 0 && moveY === 0) moveX = 1;
         this.input.setDirection({ x: moveX, y: moveY });
 
-        // Reset walls to the 4 doors + procedural interior for the new room. Seed
-        // encodes labyrinthDepth so each room has stable, reproducible walls.
-        const newInterior = generateLabyrinthInteriorWalls(
-            LABYRINTH_SEED_BASE + state.labyrinthDepth * 7919,
-            this.snake,
-            state.labyrinthDepth
-        );
+        // Reset walls to the 4 doors + a fresh simple pattern (same set Open World uses).
+        const newInterior = pickSimpleLabyrinthWalls();
         state.walls = [
             { x: halfGrid, y: 0 },
             { x: halfGrid, y: grid - 1 },

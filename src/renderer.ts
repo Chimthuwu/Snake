@@ -98,8 +98,6 @@ export class Renderer {
 
     drawWalls(ctx, cellSize, colors) {
         if (state.walls.length === 0) return;
-        const time = Date.now();
-        const tempo = 1.0 + Math.max(0, state.gridBrightness - 1) * 0.4 + (state.levelUpFlash > 0 ? 0.5 : 0);
 
         const isLethal = state.gameMode === GameMode.LABYRINTH || state.gameMode === GameMode.OPEN_WORLD;
         const palette = isLethal ? colors.wallPalette : colors.obstaclePalette;
@@ -110,21 +108,15 @@ export class Renderer {
             const cy = wall.y * cellSize;
             const sz = cellSize;
 
-            // Per-cell phase offset drives the "evolving" gradient — neighboring walls
-            // shift through their theme palette slightly out of sync, producing a calm
-            // color wave that crawls across the maze. Animation rate was previously
-            // 1.1 s/cycle (seizure-inducing); now ~8 s/cycle for a meditative feel.
-            const cellPhase = (wall.x * 0.13 + wall.y * 0.09) % 1;
-            const animOffset = (((time / 8000) * tempo + cellPhase) % 1 + 1) % 1;
-
-            // Diagonal linear gradient — the entire cell fills with the gradient. No
-            // circles, no inner shapes, no per-wall decorations inside the rectangle.
+            // Diagonal linear gradient — the entire cell fills with the gradient.
+            // No circles, no inner shapes. Stops are fixed (static) — no time-based
+            // animation, no per-cell phase. Every wall shows the same 3-stop color
+            // flow using its theme palette.
             const grad = ctx.createLinearGradient(cx, cy, cx + sz, cy + sz);
             const stopPalette = isUnlocked ? colors.unlockedPalette : palette;
-            const wrap = (offset) => ((offset % 1) + 1) % 1;
-            grad.addColorStop(wrap(animOffset - 0.35), stopPalette[0]);
-            grad.addColorStop(animOffset, stopPalette[1]);
-            grad.addColorStop(wrap(animOffset + 0.35), stopPalette[2]);
+            grad.addColorStop(0, stopPalette[0]);
+            grad.addColorStop(0.5, stopPalette[1]);
+            grad.addColorStop(1, stopPalette[2]);
 
             // Single rectangular fill (no inner objects).
             ctx.fillStyle = grad;
