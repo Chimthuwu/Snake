@@ -379,10 +379,13 @@ resetGameData() {
     }
 
     quitToMenu() {
-        // State first, UI second, audio last and caught. Order matters: if audio previously
-        // threw and somehow froze the click chain, the player could be stuck on GAMEOVER with
-        // no Menu / Restart response. Now state + UI are guaranteed to update.
-        state.current = GameState.MENU;
+        // Reset game data FIRST so the menu's attract-mode snake has a safe spawn.
+        // Without this, the dying snake from GAMEOVER is still in its old position
+        // and the attract AI immediately kills it again — replaying the death sound
+        // and flipping state back to GAMEOVER (which re-shows CRITICAL FAILURE because
+        // updateScreens runs after the death handler). resetGameData() handles state.reset()
+        // (sets state.current = MENU) + new snake + new walls + new food.
+        this.resetGameData();
         this.ui.updateScreens();
         audio.playMenuMusic().catch(() => {});
     }
