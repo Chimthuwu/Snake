@@ -399,6 +399,18 @@ resetGameData() {
             return;
         }
 
+        // If the snake dies while in MENU state (the attract-mode AI only checks
+        // immediate next-cell safety, so it can eventually lead the snake into a
+        // wall / perimeter / boundary that triggers gameOver from the menu),
+        // silently respawn via resetGameData() instead of playing the death sound
+        // and flipping to GAMEOVER. The menu is purely visual — a death there
+        // would re-show CRITICAL FAILURE and play playDie() while the player
+        // thinks they're still on the menu.
+        if (state.current === GameState.MENU) {
+            this.resetGameData();
+            return;
+        }
+
         audio.playDie();
         if (CONFIG.VISUALS.enabled) this.renderer.shake(CONFIG.SHAKE_INTENSITY_DEATH, CONFIG.SHAKE_DURATION_DEATH);
         state.setHighScore(state.score);
