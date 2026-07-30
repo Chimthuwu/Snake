@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local high-bitrate originals (kept on disk only for A/B quality check; do not push to repo)
+public/music/_backup_originals/
