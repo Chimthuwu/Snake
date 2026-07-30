@@ -18,21 +18,59 @@ function pickSimpleLabyrinthWalls(): {x: number, y: number}[] {
     return CONFIG.LEVELS[key].map(c => ({ x: c.x, y: c.y }));
 }
 
+// Shared types for Game instance fields. Hoisted out so multiple methods can use them
+// without duplication.
+type SnakeCell = { x: number, y: number };
+type Particle = {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    life: number;
+    maxLife: number;
+    size: number;
+    color: string;
+};
+type Food = { x: number; y: number; type: string };
+type Direction = { x: number; y: number };
+
 class Game {
+    // Explicit field declarations — without these, TypeScript would flag every
+    // `this.foo` assignment in the constructor as a missing property (TS2339).
+    // Declaring them up front also makes the class self-documenting and lets the
+    // strict-mode compiler catch typos in property names instead of silently
+    // creating `any` fields.
+    canvas: HTMLCanvasElement;
+    renderer: Renderer;
+    input: InputManager;
+    ui: UIManager;
+    lastTime: number;
+    accumulator: number;
+    particles: Particle[];
+    previousSnake: SnakeCell[];
+    snake: SnakeCell[];
+    food: Food | null;
+    tickRate: number;
+
     constructor() {
-        this.canvas = document.getElementById('game-canvas');
+        const canvasEl = document.getElementById('game-canvas');
+        if (!canvasEl) throw new Error('game-canvas element not found');
+        this.canvas = canvasEl as HTMLCanvasElement;
         this.renderer = new Renderer(this.canvas);
         this.input = new InputManager();
         this.ui = new UIManager(this);
-        
+
         this.lastTime = 0;
         this.accumulator = 0;
         this.particles = [];
         this.previousSnake = [];
-        
+        this.snake = [];
+        this.food = null;
+        this.tickRate = CONFIG.DIFFICULTIES[state.difficulty].baseTick;
+
         this.resetGameData();
         this.ui.updateScreens();
-        
+
         // Start loop
         requestAnimationFrame((t) => this.loop(t));
     }
@@ -59,8 +97,11 @@ resetGameData() {
     }
 
         this.snake = [];
-        let startX, startY;
-        let initialDirection = { x: 1, y: 0 }; // Default to right
+        // Initialised to safe defaults so the strict-mode compiler doesn't treat them as
+        // possibly-undefined; the spawn loop below overwrites them on every iteration.
+        let startX = 1;
+        let startY = 1;
+        let initialDirection: Direction = { x: 1, y: 0 }; // Default to right
         let validSpawn = false;
         const initialSnakeLength = 3;
 
@@ -178,13 +219,14 @@ resetGameData() {
         state.walls = CONFIG.LEVELS[randomLevelKey];
         }
 
-        generateFood() {
-        let newFood;
+        generateFood(): Food {
+        let newFood: Food;
         let valid = false;
         while (!valid) {
             newFood = {
                 x: Math.floor(Math.random() * CONFIG.GRID_SIZE),
-                y: Math.floor(Math.random() * CONFIG.GRID_SIZE)
+                y: Math.floor(Math.random() * CONFIG.GRID_SIZE),
+                type: 'NORMAL' as string
             };
             const onSnake = this.snake.some(s => s.x === newFood.x && s.y === newFood.y);
             let onWall = state.walls.some(w => w.x === newFood.x && w.y === newFood.y);
@@ -209,12 +251,10 @@ resetGameData() {
             const onPortal = state.portal && state.portal.x === newFood.x && state.portal.y === newFood.y;
             valid = !onSnake && !onWall && !onPortal;
         }
-        // Determine type
+        // Determine type (overrides the placeholder set above)
         if (Math.random() < CONFIG.POWERUP_CHANCE) {
             const types = Object.keys(CONFIG.POWERUPS);
             newFood.type = types[Math.floor(Math.random() * types.length)];
-        } else {
-            newFood.type = 'NORMAL';
         }
 
         return newFood;
@@ -333,7 +373,7 @@ resetGameData() {
         audio.playPowerup();
     }
 
-    spawnParticles(x, y, color, combo = 1) {
+    spawnParticles(x: number, y: number, color: string, combo: number = 1) {
         if (!CONFIG.VISUALS.enabled) return;
         
         // Explosion radius increases per combo tier
@@ -418,7 +458,7 @@ resetGameData() {
         this.ui.updateScreens();
     }
 
-    update(dt) {
+    update(dt: number) {
         if (state.current !== GameState.PLAYING && state.current !== GameState.MENU) return;
 
         if (state.current === GameState.MENU) {
@@ -512,6 +552,8 @@ resetGameData() {
     doAttractAI() {
         const head = this.snake[0];
         const food = this.food;
+        // No food placed yet (defensive — shouldn't happen since resetGameData seeds it).
+        if (!food) return;
         const currentDir = this.input.direction;
         
         const possibleDirs = [
@@ -784,7 +826,7 @@ resetGameData() {
         }
     }
 
-    loop(timestamp) {
+    loop(timestamp: number) {
         let dt = timestamp - this.lastTime;
         this.lastTime = timestamp;
 
@@ -838,6 +880,13 @@ resetGameData() {
         }
 
         requestAnimationFrame((t) => this.loop(t));
+    }
+}
+
+// Tell TypeScript about the runtime global the game installs on `window`.
+declare global {
+    interface Window {
+        gameInstance?: Game;
     }
 }
 
